@@ -59,10 +59,11 @@
   #wPlace { font-size:24px; color:var(--muted); margin-top:4px; }
 
 
-  #cd { text-align:center; background:var(--card); border-radius:36px; padding:16px 44px; margin:40px 20px 0; min-width:300px; }
-  #cdLab { font-size:24px; color:var(--muted); letter-spacing:5px; }
-  #cdNum { font-size:84px; font-weight:300; line-height:1.05; }
-  #cdSub { font-size:23px; color:var(--muted); }
+  #cds { display:flex; align-items:flex-start; margin-top:40px; }
+  .cd { text-align:center; background:var(--card); border-radius:30px; padding:14px 26px; margin:0 8px; min-width:236px; }
+  .cdLab { font-size:19px; color:var(--muted); letter-spacing:3px; white-space:nowrap; }
+  .cdNum { font-size:76px; font-weight:300; line-height:1.05; }
+  .cdSub { font-size:21px; color:var(--muted); white-space:nowrap; }
   #hourly { display:flex; justify-content:center; margin-top:22px; min-height:156px; }
   .hr { background:var(--card2); border-radius:24px; padding:12px 0; margin:0 6px; width:122px; text-align:center; }
   .hName { font-size:24px; color:var(--muted); white-space:nowrap; }
@@ -183,7 +184,7 @@
       <div><span id="time">--:--</span><span id="ampm"></span></div>
       <div id="date"></div>
     </div>
-    <div id="cd"><div id="cdLab">GTA VI</div><div id="cdNum">--</div><div id="cdSub"></div></div>
+    <div id="cds"><div class="cd" id="cd0"><div class="cdLab">GTA VI</div><div class="cdNum">--</div><div class="cdSub"></div></div><div class="cd" id="cd1"><div class="cdLab">DEVIL'S PLAN S3</div><div class="cdNum">--</div><div class="cdSub"></div></div></div>
     <div id="weather">
       <div id="wRow"><div id="wIcon"></div><div id="wTemp">--&deg;</div></div>
       <div id="wDesc">Loading weather</div>
@@ -258,58 +259,76 @@
 
 <script>
 /* Phone side: runs only when this page is opened from the TV's QR code (?remote=...) */
-window.TVH_ICE = { iceServers: [ {urls:"stun:stun.l.google.com:19302"}, {urls:"stun:stun1.l.google.com:19302"} ] };
 window.TVH_LIBS = {
-  peer: "https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js",
-  qr:   "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"
+  qr: "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"
 };
 (function () {
   var m = /[?&]remote=([A-Za-z0-9_-]+)/.exec(location.search);
   if (!m) { return; }
   window.__PHONE = true;
-  var tvId = m[1];
+  var topic = m[1], NTFY = "https://ntfy.sh/";
   document.documentElement.className = "phonemode";
   function $(id) { return document.getElementById(id); }
-  var conn = null, peer = null, gotErr = false;
+  var sid = "", n = 0, es = null, authed = false;
   function msg(t, bad) { $("rMsg").textContent = t; $("rMsg").className = bad ? "bad" : ""; }
   function show(pad) { $("rJoin").style.display = pad ? "none" : ""; $("rPad").style.display = pad ? "" : "none"; }
-  function send(o) {
-    if (conn && conn.open) { conn.send(o); try { if (navigator.vibrate) { navigator.vibrate(15); } } catch (e) {} }
-    else { msg("Not connected", true); show(false); }
+  function post(o, cb) {
+    try { fetch(NTFY + topic, { method: "POST", body: JSON.stringify(o) }).then(function (r) { cb(r.ok, r.status); }).catch(function () { cb(false, 0); }); }
+    catch (e) { cb(false, 0); }
+  }
+  function send(c) {
+    if (!authed) { msg("Not connected", true); show(false); return; }
+    n++;
+    post({ t: "cmd", sid: sid, n: n, c: c }, function (ok, st) {
+      if (!ok) { msg(st === 429 ? "Slow down a moment…" : "Could not send. Check your internet.", true); }
+      else if ($("rMsg").className) { msg("Connected"); }
+    });
+    try { if (navigator.vibrate) { navigator.vibrate(15); } } catch (e) {}
   }
   var names = ["Netflix", "YouTube", "Prime", "Viu", "Spotify", "PS5"];
-  names.forEach(function (n, i) {
-    var b = document.createElement("button"); b.className = "rb"; b.textContent = String(i + 1); b.title = n;
+  names.forEach(function (nm, i) {
+    var b = document.createElement("button"); b.className = "rb"; b.textContent = String(i + 1); b.title = nm;
     b.addEventListener("click", function () { send({ t: "tile", i: i }); }); $("rTiles").appendChild(b);
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-k]"), function (b) { b.addEventListener("click", function () { send({ t: "key", k: b.getAttribute("data-k") }); }); });
   $("rTheme").addEventListener("click", function () { send({ t: "theme" }); });
-  $("rBye").addEventListener("click", function () { try { if (conn) { conn.close(); } } catch (e) {} });
+  function leave(note) {
+    authed = false; try { if (es) { es.close(); } } catch (e) {}
+    show(false); $("rGo").disabled = false; msg(note || "Disconnected. Enter the code to reconnect.", !!note);
+  }
+  $("rBye").addEventListener("click", function () { if (authed) { post({ t: "bye", sid: sid }, function () {}); } leave(""); msg("Disconnected. Enter the code to reconnect.", true); });
+  function rnd(len) {
+    var c = "abcdefghijklmnopqrstuvwxyz0123456789", out = "", a = null;
+    try { a = new Uint8Array(len); crypto.getRandomValues(a); } catch (e) { a = null; }
+    for (var i = 0; i < len; i++) { out += c.charAt((a ? a[i] : Math.floor(Math.random() * 256)) % 36); }
+    return out;
+  }
   function connect() {
     var pin = $("rPin").value.replace(/\D/g, "");
     if (pin.length !== 6) { msg("Enter the 6-digit code shown on the TV.", true); return; }
-    msg("Connecting…"); $("rGo").disabled = true; gotErr = false;
-    function start() {
-      try {
-        if (peer) { try { peer.destroy(); } catch (e) {} }
-        peer = new Peer({ config: window.TVH_ICE });
-        peer.on("open", function () {
-          conn = peer.connect(tvId, { reliable: true });
-          var to = setTimeout(function () { msg("Could not reach the TV. Is the remote switched on?", true); $("rGo").disabled = false; }, 15000);
-          conn.on("open", function () { clearTimeout(to); conn.send({ t: "hello", pin: pin }); });
-          conn.on("data", function (d) {
-            if (d && d.t === "ok") { show(true); msg("Connected"); }
-            else if (d && d.t === "err") { gotErr = true; msg(d.m || "Error", true); $("rGo").disabled = false; }
-          });
-          conn.on("close", function () { show(false); $("rGo").disabled = false; if (!gotErr) { msg("Disconnected. Enter the code to reconnect.", true); } });
-        });
-        peer.on("error", function (e) { msg("Connection problem: " + ((e && e.type) || "unknown"), true); $("rGo").disabled = false; });
-      } catch (e) { msg("Could not start the remote.", true); $("rGo").disabled = false; }
-    }
-    if (window.Peer) { start(); return; }
-    var s = document.createElement("script"); s.src = window.TVH_LIBS.peer; s.onload = start;
-    s.onerror = function () { msg("Could not load the remote helper (check internet).", true); $("rGo").disabled = false; };
-    document.head.appendChild(s);
+    msg("Connecting…"); $("rGo").disabled = true;
+    try { if (es) { es.close(); } } catch (e) {}
+    sid = rnd(14); n = 0; authed = false;
+    var done = false, sent = false;
+    var to = setTimeout(function () {
+      if (done) { return; } done = true;
+      msg("Could not reach the TV. Is the remote switched on?", true); $("rGo").disabled = false; try { es.close(); } catch (e) {}
+    }, 15000);
+    function fail(t) { if (done) { return; } done = true; clearTimeout(to); msg(t, true); $("rGo").disabled = false; try { es.close(); } catch (e) {} }
+    try {
+      es = new EventSource(NTFY + topic + "-r/sse");
+      es.addEventListener("open", function () {
+        if (sent) { return; } sent = true;
+        post({ t: "hello", sid: sid, pin: pin }, function (ok, st) { if (!ok) { fail(st === 429 ? "Too many tries. Wait a moment." : "Could not reach the internet service. Check your connection."); } });
+      });
+      es.addEventListener("message", function (e) {
+        var d; try { d = JSON.parse(JSON.parse(e.data).message); } catch (x) { return; }
+        if (!d || d.sid !== sid) { return; }
+        if (d.t === "ok") { done = true; clearTimeout(to); authed = true; show(true); msg("Connected"); }
+        else if (d.t === "err") { done = true; clearTimeout(to); if (authed) { leave(d.m || "Error"); } else { msg(d.m || "Error", true); $("rGo").disabled = false; try { es.close(); } catch (e2) {} } }
+        else if (d.t === "bye") { leave(""); msg("Disconnected. Enter the code to reconnect.", true); }
+      });
+    } catch (e) { fail("Could not start the remote."); }
   }
   $("rGo").addEventListener("click", connect);
   $("rPin").addEventListener("keydown", function (e) { if (e.keyCode === 13) { connect(); } });
@@ -373,16 +392,21 @@ function timeStr(d) {
   if (S.hour12) { return { t:(h % 12 || 12) + ":" + m, ap:(h >= 12 ? "PM" : "AM") }; }
   return { t:pad2(h) + ":" + m, ap:"" };
 }
-var CD = { y:2026, m:10, d:19 };   /* GTA VI release: November 19, 2026 (month is 0-based) */
+/* countdowns (month is 0-based): GTA VI releases Nov 19, 2026; The Devil's Plan: Dead Again (season 3) premieres Nov 10, 2026 */
+var CDS = [ { id:"cd0", y:2026, m:10, d:19 }, { id:"cd1", y:2026, m:10, d:10 } ];
 function renderCd(today) {
-  var t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()), tg = new Date(CD.y, CD.m, CD.d);
-  var n = Math.round((tg.getTime() - t0.getTime()) / 86400000), num, sub;
-  if (n > 1) { num = String(n); sub = "days to go"; }
-  else if (n === 1) { num = "1"; sub = "day to go"; }
-  else if (n === 0) { num = "Today!"; sub = "Out now"; }
-  else { num = "Out now"; sub = "Enjoy"; }
-  if ($("cdNum").textContent !== num) { $("cdNum").textContent = num; }
-  if ($("cdSub").textContent !== sub) { $("cdSub").textContent = sub; }
+  var t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  for (var i = 0; i < CDS.length; i++) {
+    var c = CDS[i], tg = new Date(c.y, c.m, c.d);
+    var n = Math.round((tg.getTime() - t0.getTime()) / 86400000), num, sub;
+    if (n > 1) { num = String(n); sub = "days to go"; }
+    else if (n === 1) { num = "1"; sub = "day to go"; }
+    else if (n === 0) { num = "Today!"; sub = "Out now"; }
+    else { num = "Out now"; sub = "Enjoy"; }
+    var card = $(c.id), a = card.children[1], b = card.children[2];
+    if (a.textContent !== num) { a.textContent = num; }
+    if (b.textContent !== sub) { b.textContent = sub; }
+  }
 }
 function tick() {
   var d = zoned(new Date()), t = timeStr(d), h = d.getHours();
@@ -688,8 +712,9 @@ addEventListener("keydown", function (e) {
   e.preventDefault(); move(d);
 });
 
-/* ---- phone remote (off until you open "Phone"; loads its helpers only then) ---- */
-var peer = null, authedConn = null, pin = "", tries = 0, remoteUrl = "";
+/* ---- phone remote (off until you open "Phone"; commands travel through the free ntfy.sh message service, so any network works) ---- */
+var es = null, authedSid = "", pin = "", tries = 0, remoteUrl = "", topic = "", lastN = 0;
+var NTFY = "https://ntfy.sh/";
 function loadScript(src, ok, fail) { var s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s); }
 function newPin() {
   var n; try { var a = new Uint32Array(1); crypto.getRandomValues(a); n = a[0] % 1000000; } catch (e) { n = Math.floor(Math.random() * 1000000); }
@@ -697,59 +722,57 @@ function newPin() {
 }
 function rid() {
   var c = "abcdefghijklmnopqrstuvwxyz0123456789", s = "", a = null;
-  try { a = new Uint8Array(12); crypto.getRandomValues(a); } catch (e) { a = null; }
-  for (var i = 0; i < 12; i++) { s += c.charAt((a ? a[i] : Math.floor(Math.random() * 256)) % 36); }
-  return "tvhome-" + s;
+  try { a = new Uint8Array(22); crypto.getRandomValues(a); } catch (e) { a = null; }
+  for (var i = 0; i < 22; i++) { s += c.charAt((a ? a[i] : Math.floor(Math.random() * 256)) % 36); }
+  return "tvh" + s;
 }
+function reply(o) { try { fetch(NTFY + topic + "-r", { method: "POST", body: JSON.stringify(o) }).catch(function () {}); } catch (e) {} }
 function setPair(t) { $("pairStatus").textContent = t; }
 function renderPair() {
   $("pairPin").textContent = pin ? pin.slice(0, 3) + " " + pin.slice(3) : "------";
   $("pairUrl").textContent = remoteUrl;
-  setPair(authedConn && authedConn.open ? "Phone connected ✓" : "Waiting for your phone…");
-  $("phoneBtn").textContent = authedConn && authedConn.open ? "Phone ●" : "Phone";
+  setPair(authedSid ? "Phone connected ✓" : (remoteUrl ? "Waiting for your phone…" : "Starting…"));
+  $("phoneBtn").textContent = authedSid ? "Phone ●" : "Phone";
   var html = "";
   try { if (window.qrcode && remoteUrl) { var qr = window.qrcode(0, "M"); qr.addData(remoteUrl); qr.make(); html = qr.createSvgTag(6, 2); } } catch (e) { html = ""; }
   $("pairQr").innerHTML = html;
 }
 function startRemote() {
-  if (peer) { renderPair(); return; }
-  setPair("Starting…"); pin = ""; remoteUrl = ""; $("pairQr").innerHTML = ""; renderPair(); setPair("Starting…");
-  var libs = window.TVH_LIBS;
-  loadScript(libs.peer, function () { loadScript(libs.qr, initRemote, initRemote); }, function () { setPair("Could not load the remote helper (check the internet)."); });
+  if (es) { renderPair(); return; }
+  pin = ""; remoteUrl = ""; $("pairQr").innerHTML = ""; renderPair(); setPair("Starting…");
+  loadScript(window.TVH_LIBS.qr, initRemote, initRemote);
 }
 function initRemote() {
   try {
-    var id = rid(); pin = newPin(); tries = 0;
-    peer = new window.Peer(id, { config: window.TVH_ICE });
-    peer.on("open", function () { remoteUrl = (/^https?:$/.test(location.protocol) ? location.origin + location.pathname : "https://unorthodox15.github.io/tv-dashboard/") + "?remote=" + id; renderPair(); });
-    peer.on("connection", onConn);
-    peer.on("error", function (e) { setPair("Remote problem: " + ((e && e.type) || "unknown")); });
-    peer.on("disconnected", function () { try { peer.reconnect(); } catch (x) {} });
-  } catch (e) { peer = null; setPair("Could not start the remote."); }
+    topic = rid(); pin = newPin(); tries = 0; authedSid = ""; lastN = 0;
+    es = new EventSource(NTFY + topic + "/sse");
+    es.addEventListener("open", function () { if (!remoteUrl) { remoteUrl = (/^https?:$/.test(location.protocol) ? location.origin + location.pathname : "https://unorthodox15.github.io/tv-dashboard/") + "?remote=" + topic; } renderPair(); });
+    es.addEventListener("message", function (e) {
+      var d; try { d = JSON.parse(JSON.parse(e.data).message); } catch (x) { return; }
+      onMsg(d);
+    });
+    es.onerror = function () { if (es && es.readyState === 2) { setPair("Remote problem: connection closed"); } };
+  } catch (e) { es = null; setPair("Could not start the remote."); }
 }
 function stopRemote() {
-  try { if (peer) { peer.destroy(); } } catch (e) {}
-  peer = null; authedConn = null; pin = ""; remoteUrl = ""; $("phoneBtn").textContent = "Phone"; toast("Phone remote off");
+  try { if (es) { es.close(); } } catch (e) {}
+  es = null; authedSid = ""; pin = ""; remoteUrl = ""; topic = ""; $("phoneBtn").textContent = "Phone"; toast("Phone remote off");
 }
-function onConn(conn) {
-  conn.on("data", function (d) { onMsg(conn, d); });
-  conn.on("close", function () { if (authedConn === conn) { authedConn = null; renderPair(); toast("Phone disconnected"); } });
-}
-function onMsg(conn, d) {
-  if (!d || typeof d !== "object") { return; }
-  if (!conn.authed) {
-    if (d.t !== "hello") { return; }
-    if (authedConn && authedConn.open) { conn.send({ t:"err", m:"Another phone is already connected." }); return; }
-    if (String(d.pin) === pin && pin) { conn.authed = true; authedConn = conn; tries = 0; conn.send({ t:"ok" }); renderPair(); toast("Phone connected"); }
+function onMsg(d) {
+  if (!d || typeof d !== "object" || !d.sid) { return; }
+  if (d.t === "hello") {
+    if (authedSid && d.sid !== authedSid) { reply({ t:"err", sid:d.sid, m:"Another phone is already connected." }); return; }
+    if (authedSid === d.sid) { reply({ t:"ok", sid:d.sid }); return; }
+    if (pin && String(d.pin) === pin) { authedSid = d.sid; tries = 0; lastN = 0; reply({ t:"ok", sid:d.sid }); renderPair(); toast("Phone connected"); }
     else {
-      tries++; conn.send({ t:"err", m:"Wrong code." });
+      tries++; reply({ t:"err", sid:d.sid, m:"Wrong code." });
       if (tries >= 5) { pin = newPin(); tries = 0; renderPair(); }
-      setTimeout(function () { try { conn.close(); } catch (e) {} }, 300);
     }
     return;
   }
-  wake();
-  handleCmd(d);
+  if (d.sid !== authedSid) { if (d.t === "cmd") { reply({ t:"err", sid:d.sid, m:"Enter the code again." }); } return; }
+  if (d.t === "bye") { authedSid = ""; renderPair(); toast("Phone disconnected"); return; }
+  if (d.t === "cmd" && typeof d.n === "number" && d.n > lastN && d.c) { lastN = d.n; wake(); handleCmd(d.c); }
 }
 function handleCmd(d) {
   if (d.t === "key") {
