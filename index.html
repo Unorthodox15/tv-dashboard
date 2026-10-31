@@ -59,12 +59,16 @@
   #wPlace { font-size:24px; color:var(--muted); margin-top:4px; }
 
 
-  #cds { display:flex; align-items:flex-start; margin-top:40px; }
-  .cd { text-align:center; background:var(--card); border-radius:30px; padding:14px 26px; margin:0 8px; min-width:236px; }
-  .cdLab { font-size:19px; color:var(--muted); letter-spacing:3px; white-space:nowrap; }
-  .cdNum { font-size:76px; font-weight:300; line-height:1.05; }
-  .cdSub { font-size:21px; color:var(--muted); white-space:nowrap; }
-  .cdT { font-size:34px; font-weight:300; margin-top:4px; white-space:nowrap; letter-spacing:1px; }
+  #cds { display:block; margin-top:30px; flex:none; }
+  .cd { background:var(--card); border-radius:26px; padding:8px 22px 10px; margin:0 14px 12px; text-align:center; }
+  .cdLab { font-size:19px; color:var(--muted); letter-spacing:4px; white-space:nowrap; margin-bottom:2px; }
+  .cdG { display:flex; justify-content:center; }
+  .u { width:96px; text-align:center; }
+  .u b { display:block; font-size:52px; font-weight:300; line-height:1.08; font-variant-numeric:tabular-nums; }
+  .u i { display:block; font-style:normal; font-size:12px; letter-spacing:2px; color:var(--muted); margin-top:-2px; }
+  .cdDone { display:none; font-size:44px; font-weight:300; padding:8px 0; }
+  .cd.done .cdG { display:none; }
+  .cd.done .cdDone { display:block; }
   #hourly { display:flex; justify-content:center; margin-top:22px; min-height:156px; }
   .hr { background:var(--card2); border-radius:24px; padding:12px 0; margin:0 6px; width:122px; text-align:center; }
   .hName { font-size:24px; color:var(--muted); white-space:nowrap; }
@@ -149,7 +153,7 @@
       <div><span id="time">--:--</span><span id="ampm"></span></div>
       <div id="date"></div>
     </div>
-    <div id="cds"><div class="cd" id="cd0"><div class="cdLab">GTA VI</div><div class="cdNum">--</div><div class="cdSub"></div></div><div class="cd" id="cd1"><div class="cdLab">DEVIL'S PLAN S3</div><div class="cdNum">--</div><div class="cdSub"></div></div></div>
+    <div id="cds"><div class="cd" id="cd0"><div class="cdLab">GTA VI</div><div class="cdG"><div class="u"><b>--</b><i>DAYS</i></div><div class="u"><b>--</b><i>HOURS</i></div><div class="u"><b>--</b><i>MINUTES</i></div><div class="u"><b>--</b><i>SECONDS</i></div></div><div class="cdDone"></div></div><div class="cd" id="cd1"><div class="cdLab">DEVIL'S PLAN S3</div><div class="cdG"><div class="u"><b>--</b><i>DAYS</i></div><div class="u"><b>--</b><i>HOURS</i></div><div class="u"><b>--</b><i>MINUTES</i></div><div class="u"><b>--</b><i>SECONDS</i></div></div><div class="cdDone"></div></div></div>
     <div id="weather">
       <div id="wRow"><div id="wIcon"></div><div id="wTemp">--&deg;</div></div>
       <div id="wDesc">Loading weather</div>
@@ -267,17 +271,16 @@ function renderCd(today) {
   /* compare wall-clock fields in UTC so a daylight-saving change can't shift the count */
   var now = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours(), today.getMinutes(), today.getSeconds());
   for (var i = 0; i < CDS.length; i++) {
-    var c = CDS[i], ms = Date.UTC(c.y, c.m, c.d) - now, num, sub, tm = "";
+    var c = CDS[i], ms = Date.UTC(c.y, c.m, c.d) - now, card = $(c.id), us = card.getElementsByTagName("b");
     if (ms > 0) {
-      var sec = Math.floor(ms / 1000), dd = Math.floor(sec / 86400), hh = Math.floor(sec % 86400 / 3600), mm = Math.floor(sec % 3600 / 60), ss = sec % 60;
-      num = String(dd); sub = dd === 1 ? "day" : "days"; tm = p2(hh) + "h " + p2(mm) + "m " + p2(ss) + "s";
-    } else if (ms > -86400000) { num = "Today!"; sub = "Out now"; }
-    else { num = "Out now"; sub = "Enjoy"; }
-    var card = $(c.id), a = card.children[1], b = card.children[2], t = card.children[3];
-    if (!t) { t = document.createElement("div"); t.className = "cdT"; card.appendChild(t); }
-    if (a.textContent !== num) { a.textContent = num; }
-    if (b.textContent !== sub) { b.textContent = sub; }
-    if (t.textContent !== tm) { t.textContent = tm; }
+      var sec = Math.floor(ms / 1000), v = [Math.floor(sec / 86400), Math.floor(sec % 86400 / 3600), Math.floor(sec % 3600 / 60), sec % 60];
+      for (var k = 0; k < 4; k++) { var t = k === 0 ? String(v[k]) : p2(v[k]); if (us[k].textContent !== t) { us[k].textContent = t; } }
+      card.className = "cd";
+    } else {
+      var d = card.lastChild, txt = ms > -86400000 ? "Out today!" : "Out now";
+      if (d.textContent !== txt) { d.textContent = txt; }
+      card.className = "cd done";
+    }
   }
 }
 function tick() {
