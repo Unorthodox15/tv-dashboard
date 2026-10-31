@@ -514,11 +514,11 @@ function toast(msg) {
 }
 
 /* ---- overlays (settings, music, phone) ---- */
-function openOverlay(id, focusId, opener) { overlay = $(id); openerId = opener; overlay.className = "overlay"; $(focusId).focus(); }
+function openOverlay(id, focusId, opener) { overlay = $(id); openerId = opener; lastActive = Date.now(); overlay.className = "overlay"; $(focusId).focus(); }
 function closeOverlay() {
   if (!overlay) { return; }
   if (overlay.id === "musicPanel") { $("spFrame").src = "about:blank"; }
-  overlay.className = "overlay hidden"; overlay = null;
+  overlay.className = "overlay hidden"; overlay = null; lastActive = Date.now();
   var o = openerId && $(openerId); if (o) { o.focus(); }
 }
 
@@ -563,7 +563,9 @@ $("spIn").addEventListener("keydown", function (e) { if (e.keyCode === 13) { sav
 
 /* ---- idle: dim + slowly shift pixels (protects OLED/LCD from burn-in) ---- */
 function wake() { lastActive = Date.now(); document.body.className = document.body.className.replace(/\s*idle/, ""); }
+/* the Spotify player is an iframe: remote key presses inside it never reach this page, so never dim while it is open (music keeps the screen on) */
 setInterval(function () {
+  if (overlay && overlay.id === "musicPanel") { lastActive = Date.now(); return; }
   if (S.idleMin > 0 && Date.now() - lastActive > S.idleMin * 60000 && document.body.className.indexOf("idle") < 0) { document.body.className += " idle"; }
 }, 5000);
 var SHIFTS = [[0,0],[6,4],[-5,7],[4,-6],[-7,-3]], shiftI = 0;
