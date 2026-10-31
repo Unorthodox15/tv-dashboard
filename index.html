@@ -186,8 +186,6 @@
  <div id="panel" class="overlay hidden">
   <div class="box">
     <h2>Settings</h2>
-    <div class="row"><label>City</label><input id="cityIn" class="field f" type="text" tabindex="0" placeholder="Type a city"><button class="btn f" id="cityGo" tabindex="0">Search</button></div>
-    <div class="msg" id="cityMsg"></div>
     <div class="row"><label>Temperature</label><button class="btn f" id="unitsBtn" tabindex="0"></button></div>
     <div class="row"><label>Clock</label><button class="btn f" id="clockBtn" tabindex="0"></button></div>
     <div class="row"><label>Time zone</label><button class="btn f" id="tzBtn" tabindex="0"></button></div>
@@ -548,21 +546,6 @@ $("animBtn").addEventListener("click", function () { S.anim = !S.anim; save(); l
 $("idleBtn").addEventListener("click", function () {
   var i = IDLE_OPTS.indexOf(S.idleMin); S.idleMin = IDLE_OPTS[(i + 1) % IDLE_OPTS.length]; save(); labels();
 });
-function findCity() {
-  var q = $("cityIn").value.replace(/^\s+|\s+$/g, ""), msg = $("cityMsg");
-  if (!q) { return; }
-  msg.textContent = "Searching…";
-  fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=" + encodeURIComponent(q))
-    .then(function (r) { return r.json(); }).then(function (j) {
-      if (!j.results || !j.results.length) { msg.textContent = "No match for “" + q + "”"; return; }
-      var r = j.results[0];
-      S.place = r.name + (r.admin1 ? ", " + r.admin1 : ""); S.lat = r.latitude; S.lon = r.longitude; save();
-      msg.textContent = "Weather set to " + S.place; loadWeather();
-    }).catch(function () { msg.textContent = "Could not search (check internet)"; });
-}
-$("cityGo").addEventListener("click", findCity);
-$("cityIn").addEventListener("keydown", function (e) { if (e.keyCode === 13) { findCity(); } });
-
 /* ---- Spotify ---- */
 function spotifyEmbed(url) {
   var m = /open\.spotify\.com\/(?:intl-[a-z-]+\/)?(playlist|album|track|artist|show|episode)\/([A-Za-z0-9]+)/.exec(url || "");
