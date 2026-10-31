@@ -340,7 +340,7 @@ window.TVH_LIBS = {
 if (window.__PHONE) { return; }
 
 /* ---------- EDIT THESE (or use Settings on the TV) ---------- */
-var DEFAULTS = { tz:"America/Regina", place:"Calgary", lat:51.05, lon:-114.07, units:"celsius", hour12:true, anim:true, idleMin:15, theme:"midnight",
+var DEFAULTS = { tz:"Etc/GMT+6", place:"Calgary", lat:51.05, lon:-114.07, units:"celsius", hour12:true, anim:true, idleMin:15, theme:"midnight",
                  spotify:"https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M" };
 var TILES = [
   { name:"Netflix",     appId:"netflix",             url:"https://www.netflix.com",    color:"#e50914", letter:"N" },
@@ -376,7 +376,7 @@ function fit() { var s = Math.min(innerWidth / 1920, innerHeight / 1080); $("sta
 addEventListener("resize", fit); fit();
 
 /* ---- clock + greeting ---- */
-var TZS = [ ["America/Regina", "Regina (no daylight saving)"], ["America/Edmonton", "Calgary / Edmonton"], ["America/Winnipeg", "Winnipeg"], ["America/Toronto", "Toronto"], ["America/Vancouver", "Vancouver"], ["", "Same as the TV"] ];
+var TZS = [ ["Etc/GMT+6", "Calgary / Alberta (UTC-6, no clock changes)"], ["America/Winnipeg", "Winnipeg"], ["America/Toronto", "Toronto"], ["America/Vancouver", "Vancouver"], ["", "Same as the TV"] ];
 /* returns a Date whose local fields (getHours etc.) show the wall-clock time in the chosen time zone */
 function zoned(d) {
   if (!S.tz) { return d; }
