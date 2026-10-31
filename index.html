@@ -30,13 +30,8 @@
 
   #aurora { position:fixed; top:0; left:0; right:0; bottom:0; overflow:hidden; pointer-events:none; z-index:0; }
   .blob { position:absolute; width:1200px; height:1200px; border-radius:50%; }
-  .b1 { background:radial-gradient(circle, var(--blob1) 0%, transparent 65%); top:-400px; left:-300px; animation:d1 50s ease-in-out infinite alternate; }
-  .b2 { background:radial-gradient(circle, var(--blob2) 0%, transparent 65%); bottom:-500px; right:-300px; animation:d2 65s ease-in-out infinite alternate; }
-  @keyframes d1 { to { transform:translate(500px,300px); } }
-  @keyframes d2 { to { transform:translate(-500px,-250px); } }
-  body.noanim .blob { animation:none; }
-  .blob { will-change:transform; }
-  body.busy .blob { animation-play-state:paused; }
+  .b1 { background:radial-gradient(circle, var(--blob1) 0%, transparent 65%); top:-400px; left:-300px; }
+  .b2 { background:radial-gradient(circle, var(--blob2) 0%, transparent 65%); bottom:-500px; right:-300px; }
 
   #stage { position:relative; z-index:1; width:1920px; height:1080px; flex:none; transform-origin:center center; overflow:hidden; }
   #shift { position:absolute; top:0; left:0; width:1920px; height:1080px; padding:54px 110px 46px;
@@ -107,9 +102,9 @@
          padding:12px 30px; cursor:pointer; outline:none; margin-left:22px; text-decoration:none; }
   #controls .btn:first-of-type { margin-left:34px; }
 
-  .f { outline:none; border:5px solid transparent; transition:transform .12s ease-out, border-color .12s ease-out; }
-  .tile.f { border-width:6px; }
-  .f:focus { transform:scale(1.07); border-color:var(--accent); box-shadow:0 0 0 7px var(--glow), 0 10px 22px rgba(0,0,0,.3); }
+  .f { outline:none; border:5px solid transparent; transition:transform .1s ease-out; }
+  .tile.f { border-width:6px; will-change:transform; }
+  .f:focus { transform:scale(1.07); border-color:var(--accent); box-shadow:0 0 0 7px var(--glow); }
   .tile.f:focus { transform:scale(1.09); }
   .sw.f:focus { transform:scale(1.25); }
 
@@ -189,7 +184,6 @@
     <div class="row"><label>Temperature</label><button class="btn f" id="unitsBtn" tabindex="0"></button></div>
     <div class="row"><label>Clock</label><button class="btn f" id="clockBtn" tabindex="0"></button></div>
     <div class="row"><label>Time zone</label><button class="btn f" id="tzBtn" tabindex="0"></button></div>
-    <div class="row"><label>Moving background</label><button class="btn f" id="animBtn" tabindex="0"></button></div>
     <div class="row"><label>Dim when idle</label><button class="btn f" id="idleBtn" tabindex="0"></button></div>
     <div class="row" id="spRow"><label>Web player playlist</label><input id="spIn" class="field f" type="text" tabindex="0" placeholder="Paste a Spotify link"><button class="btn f" id="spGo" tabindex="0">Save</button></div>
     <div class="msg" id="spMsg"></div>
@@ -533,7 +527,6 @@ function labels() {
   $("clockBtn").textContent = S.hour12 ? "12-hour" : "24-hour";
   var tzName = "Same as the TV"; for (var z = 0; z < TZS.length; z++) { if (TZS[z][0] === (S.tz || "")) { tzName = TZS[z][1]; } }
   $("tzBtn").textContent = tzName;
-  $("animBtn").textContent = S.anim ? "On" : "Off";
   $("idleBtn").textContent = S.idleMin ? S.idleMin + " minutes" : "Never";
   document.body.className = (S.anim ? "" : "noanim ") + (document.body.className.indexOf("idle") >= 0 ? "idle" : "");
 }
@@ -542,7 +535,6 @@ $("doneBtn").addEventListener("click", closeOverlay);
 $("unitsBtn").addEventListener("click", function () { S.units = S.units === "fahrenheit" ? "celsius" : "fahrenheit"; save(); labels(); loadWeather(); });
 $("tzBtn").addEventListener("click", function () { var k = 0; for (var z = 0; z < TZS.length; z++) { if (TZS[z][0] === (S.tz || "")) { k = z; } } S.tz = TZS[(k + 1) % TZS.length][0]; save(); labels(); tick(); loadWeather(); });
 $("clockBtn").addEventListener("click", function () { S.hour12 = !S.hour12; save(); labels(); tick(); });
-$("animBtn").addEventListener("click", function () { S.anim = !S.anim; save(); labels(); });
 $("idleBtn").addEventListener("click", function () {
   var i = IDLE_OPTS.indexOf(S.idleMin); S.idleMin = IDLE_OPTS[(i + 1) % IDLE_OPTS.length]; save(); labels();
 });
