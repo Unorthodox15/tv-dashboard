@@ -387,7 +387,7 @@ function tick() {
   $("greet").textContent = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
   if (S.theme === "auto") { applyTheme(); }
 }
-tick(); setInterval(tick, 5000);
+tick(); setInterval(tick, 1000);
 
 /* ---- weather icons: drawn by the page, so they look the same on every TV ---- */
 var CLOUD = "M20 48H46a9 9 0 0 0 0-18a13 13 0 0 0-25-3a10.5 10.5 0 0 0-1 21Z";
@@ -459,10 +459,12 @@ function renderWx(j, stale, when) {
   }
   $("forecast").innerHTML = html;
 }
+var wxLast = 0;
 function loadWeather() {
   var key = wxKey();
   try { var c0 = JSON.parse(lsGet("tvWx") || "null"); if (c0 && c0.key === key && c0.data && c0.data.current) { renderWx(c0.data, false, c0.t); } } catch (e) {}
   fetch(wxUrl()).then(function (r) { if (!r.ok) { throw new Error("bad"); } return r.json(); }).then(function (j) {
+    wxLast = Date.now();
     lsSet("tvWx", JSON.stringify({ key:key, t:Date.now(), data:j }));
     renderWx(j, false, Date.now());
   }).catch(function () {
@@ -472,7 +474,14 @@ function loadWeather() {
     else { $("wIcon").innerHTML = ""; $("wDesc").textContent = "Weather unavailable"; $("wFeels").textContent = ""; $("wPlace").textContent = S.place; $("forecast").innerHTML = ""; }
   });
 }
-loadWeather(); setInterval(loadWeather, 15 * 60 * 1000);
+loadWeather(); setInterval(loadWeather, 10 * 60 * 1000);
+/* keep time and weather fresh even if the TV paused the app: refresh on resume, and re-check every minute */
+function refreshNow() { tick(); if (Date.now() - wxLast > 5 * 60 * 1000) { loadWeather(); } }
+document.addEventListener("visibilitychange", function () { if (!document.hidden) { refreshNow(); } });
+window.addEventListener("focus", refreshNow);
+document.addEventListener("webOSRelaunch", refreshNow);
+window.addEventListener("online", function () { loadWeather(); });
+setInterval(function () { tick(); if (Date.now() - wxLast > 20 * 60 * 1000) { loadWeather(); } }, 60000);
 
 /* ---- tiles ---- */
 var MUSIC_INDEX = -1;
