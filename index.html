@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV Home</title>
+<style>
+  :root {
+    --bg1: #0f1226; --bg2: #1d2350;
+    --card: rgba(255,255,255,0.08);
+    --text: #f4f6ff; --muted: #a9b0d6;
+    --accent: #7c8cff;
+  }
+  [data-theme="sunset"] { --bg1:#2a0f1f; --bg2:#7a2f4a; --card:rgba(255,255,255,0.10); --text:#fff4ee; --muted:#f0b8b0; --accent:#ffb36b; }
+  [data-theme="forest"] { --bg1:#0c1f1a; --bg2:#1f5a46; --card:rgba(255,255,255,0.09); --text:#eefaf4; --muted:#a6d4c1; --accent:#6be3a4; }
+  [data-theme="ocean"]  { --bg1:#07182b; --bg2:#0f5c7a; --card:rgba(255,255,255,0.09); --text:#eefbff; --muted:#a3d3e6; --accent:#5fd3ff; }
+  [data-theme="light"]  { --bg1:#eef1fb; --bg2:#cfd8f5; --card:rgba(255,255,255,0.75); --text:#1a2040; --muted:#55608f; --accent:#3d4fe0; }
+
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; overflow:hidden; }
+  body {
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text);
+    background: linear-gradient(135deg, var(--bg1), var(--bg2));
+    display:flex; align-items:center; justify-content:center;
+  }
+  /* Fixed 1920x1080 canvas, scaled to fit any screen */
+  #stage { width:1920px; height:1080px; flex:none; transform-origin:center center; padding:80px 110px; display:flex; flex-direction:column; }
+
+  header { display:flex; justify-content:space-between; align-items:flex-start; }
+  #time { font-size:190px; font-weight:200; line-height:1; letter-spacing:-4px; }
+  #ampm { font-size:56px; font-weight:300; color:var(--muted); margin-left:14px; letter-spacing:0; }
+  #date { font-size:44px; color:var(--muted); margin-top:10px; }
+
+  #weather { text-align:right; background:var(--card); border-radius:36px; padding:34px 48px; min-width:480px; }
+  #wIcon { font-size:96px; line-height:1; }
+  #wTemp { font-size:96px; font-weight:300; line-height:1; }
+  #wDesc { font-size:36px; color:var(--muted); margin-top:8px; }
+  #wRow  { display:flex; align-items:center; justify-content:flex-end; gap:28px; }
+  #wPlace { font-size:28px; color:var(--muted); margin-top:6px; }
+
+  main { flex:1; display:flex; align-items:center; justify-content:center; gap:60px; }
+  .tile {
+    width:480px; height:360px; border-radius:44px;
+    background:var(--card); color:var(--text); text-decoration:none;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px;
+    font-size:52px; font-weight:500;
+    border:6px solid transparent;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    outline:none;
+  }
+  .tile .logo { width:150px; height:150px; border-radius:36px; display:flex; align-items:center; justify-content:center; font-size:84px; font-weight:700; color:#fff; }
+  .netflix .logo { background:#e50914; }
+  .youtube .logo { background:#ff0000; }
+  .prime   .logo { background:#00a8e1; }
+  .tile:focus, .tile:hover, #themeBtn:focus {
+    transform: scale(1.08);
+    border-color: var(--accent);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.35), 0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+
+  footer { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:30px; }
+  #themeBtn {
+    font:inherit; font-size:32px; color:var(--text); background:var(--card);
+    border:6px solid transparent; border-radius:30px; padding:18px 42px; cursor:pointer; outline:none;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+</style>
+</head>
+<body data-theme="midnight">
+<div id="stage">
+  <header>
+    <div>
+      <div><span id="time">--:--</span><span id="ampm"></span></div>
+      <div id="date"></div>
+    </div>
+    <div id="weather">
+      <div id="wRow"><div id="wIcon">…</div><div id="wTemp">--°</div></div>
+      <div id="wDesc">Loading weather</div>
+      <div id="wPlace"></div>
+    </div>
+  </header>
+
+  <main>
+    <a class="tile netflix" href="https://www.netflix.com" tabindex="0"><div class="logo">N</div>Netflix</a>
+    <a class="tile youtube" href="https://www.youtube.com/tv" tabindex="0"><div class="logo">▶</div>YouTube</a>
+    <a class="tile prime"   href="https://www.primevideo.com" tabindex="0"><div class="logo">P</div>Prime Video</a>
+  </main>
+
+  <footer>
+    <span>Use the arrow keys and OK to choose</span>
+    <button id="themeBtn" tabindex="0">Theme: <span id="themeName">Midnight</span></button>
+  </footer>
+</div>
+
+<script>
+/* ---------- EDIT THESE ---------- */
+const CONFIG = {
+  place: "Calgary",
+  lat: 51.05, lon: -114.07,
+  units: "celsius",          // "celsius" or "fahrenheit"
+  hour12: true               // false for 24-hour clock
+};
+const THEMES = ["midnight","sunset","forest","ocean","light"];
+/* -------------------------------- */
+
+// Scale the 1920x1080 stage to fit the screen
+function fit() {
+  const s = Math.min(innerWidth/1920, innerHeight/1080);
+  document.getElementById("stage").style.transform = "scale(" + s + ")";
+}
+addEventListener("resize", fit); fit();
+
+// Clock
+function tick() {
+  const d = new Date();
+  let h = d.getHours(), m = String(d.getMinutes()).padStart(2,"0");
+  let ap = "";
+  if (CONFIG.hour12) { ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; }
+  else h = String(h).padStart(2,"0");
+  document.getElementById("time").textContent = h + ":" + m;
+  document.getElementById("ampm").textContent = ap;
+  document.getElementById("date").textContent =
+    d.toLocaleDateString(undefined, { weekday:"long", month:"long", day:"numeric" });
+}
+tick(); setInterval(tick, 10000);
+
+// Weather (Open-Meteo, no API key needed)
+const WX = {0:["☀️","Clear"],1:["🌤️","Mostly clear"],2:["⛅","Partly cloudy"],3:["☁️","Overcast"],
+  45:["🌫️","Fog"],48:["🌫️","Fog"],51:["🌦️","Light drizzle"],53:["🌦️","Drizzle"],55:["🌦️","Heavy drizzle"],
+  61:["🌧️","Light rain"],63:["🌧️","Rain"],65:["🌧️","Heavy rain"],71:["🌨️","Light snow"],73:["🌨️","Snow"],
+  75:["❄️","Heavy snow"],77:["🌨️","Snow grains"],80:["🌦️","Showers"],81:["🌧️","Showers"],82:["⛈️","Heavy showers"],
+  85:["🌨️","Snow showers"],86:["🌨️","Snow showers"],95:["⛈️","Thunderstorm"],96:["⛈️","Thunderstorm"],99:["⛈️","Thunderstorm"]};
+function loadWeather() {
+  const url = "https://api.open-meteo.com/v1/forecast?latitude=" + CONFIG.lat + "&longitude=" + CONFIG.lon +
+    "&current=temperature_2m,weather_code&temperature_unit=" + CONFIG.units;
+  fetch(url).then(r => r.json()).then(j => {
+    const t = Math.round(j.current.temperature_2m);
+    const w = WX[j.current.weather_code] || ["🌡️","Weather"];
+    document.getElementById("wIcon").textContent = w[0];
+    document.getElementById("wTemp").textContent = t + "°";
+    document.getElementById("wDesc").textContent = w[1];
+    document.getElementById("wPlace").textContent = CONFIG.place;
+  }).catch(() => {
+    document.getElementById("wDesc").textContent = "Weather unavailable";
+    document.getElementById("wPlace").textContent = CONFIG.place;
+  });
+}
+loadWeather(); setInterval(loadWeather, 15 * 60 * 1000);
+
+// Themes
+function setTheme(name) {
+  document.body.setAttribute("data-theme", name);
+  document.getElementById("themeName").textContent = name.charAt(0).toUpperCase() + name.slice(1);
+  try { localStorage.setItem("tvTheme", name); } catch (e) {}
+}
+function nextTheme() {
+  const cur = document.body.getAttribute("data-theme");
+  setTheme(THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length]);
+}
+let saved = null; try { saved = localStorage.getItem("tvTheme"); } catch (e) {}
+setTheme(THEMES.indexOf(saved) >= 0 ? saved : "midnight");
+document.getElementById("themeBtn").addEventListener("click", nextTheme);
+
+// Remote-control navigation: arrow keys move focus to the nearest item in that direction
+const items = () => Array.prototype.slice.call(document.querySelectorAll("[tabindex='0']"));
+function center(el) { const r = el.getBoundingClientRect(); return { x:r.left + r.width/2, y:r.top + r.height/2 }; }
+addEventListener("keydown", function (e) {
+  const dirs = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
+  const d = dirs[e.key];
+  if (!d) return;
+  e.preventDefault();
+  const list = items(), cur = document.activeElement;
+  if (list.indexOf(cur) < 0) { list[0].focus(); return; }
+  const c = center(cur); let best = null, bestScore = Infinity;
+  list.forEach(function (el) {
+    if (el === cur) return;
+    const p = center(el), dx = p.x - c.x, dy = p.y - c.y;
+    const along = dx*d[0] + dy*d[1];
+    if (along <= 0) return;
+    const across = Math.abs(dx*d[1]) + Math.abs(dy*d[0]);
+    const score = along + across * 2;
+    if (score < bestScore) { bestScore = score; best = el; }
+  });
+  if (best) best.focus();
+});
+items()[0].focus();
+</script>
+</body>
+</html>
