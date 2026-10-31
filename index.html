@@ -64,6 +64,7 @@
   .cdLab { font-size:19px; color:var(--muted); letter-spacing:3px; white-space:nowrap; }
   .cdNum { font-size:76px; font-weight:300; line-height:1.05; }
   .cdSub { font-size:21px; color:var(--muted); white-space:nowrap; }
+  .cdT { font-size:34px; font-weight:300; margin-top:4px; white-space:nowrap; letter-spacing:1px; }
   #hourly { display:flex; justify-content:center; margin-top:22px; min-height:156px; }
   .hr { background:var(--card2); border-radius:24px; padding:12px 0; margin:0 6px; width:122px; text-align:center; }
   .hName { font-size:24px; color:var(--muted); white-space:nowrap; }
@@ -261,18 +262,22 @@ function timeStr(d) {
 }
 /* countdowns (month is 0-based): GTA VI releases Nov 19, 2026; The Devil's Plan: Dead Again (season 3) premieres Nov 10, 2026 */
 var CDS = [ { id:"cd0", y:2026, m:10, d:19 }, { id:"cd1", y:2026, m:10, d:10 } ];
+function p2(n) { return n < 10 ? "0" + n : String(n); }
 function renderCd(today) {
-  var t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  /* compare wall-clock fields in UTC so a daylight-saving change can't shift the count */
+  var now = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours(), today.getMinutes(), today.getSeconds());
   for (var i = 0; i < CDS.length; i++) {
-    var c = CDS[i], tg = new Date(c.y, c.m, c.d);
-    var n = Math.round((tg.getTime() - t0.getTime()) / 86400000), num, sub;
-    if (n > 1) { num = String(n); sub = "days to go"; }
-    else if (n === 1) { num = "1"; sub = "day to go"; }
-    else if (n === 0) { num = "Today!"; sub = "Out now"; }
+    var c = CDS[i], ms = Date.UTC(c.y, c.m, c.d) - now, num, sub, tm = "";
+    if (ms > 0) {
+      var sec = Math.floor(ms / 1000), dd = Math.floor(sec / 86400), hh = Math.floor(sec % 86400 / 3600), mm = Math.floor(sec % 3600 / 60), ss = sec % 60;
+      num = String(dd); sub = dd === 1 ? "day" : "days"; tm = p2(hh) + "h " + p2(mm) + "m " + p2(ss) + "s";
+    } else if (ms > -86400000) { num = "Today!"; sub = "Out now"; }
     else { num = "Out now"; sub = "Enjoy"; }
-    var card = $(c.id), a = card.children[1], b = card.children[2];
+    var card = $(c.id), a = card.children[1], b = card.children[2], t = card.children[3];
+    if (!t) { t = document.createElement("div"); t.className = "cdT"; card.appendChild(t); }
     if (a.textContent !== num) { a.textContent = num; }
     if (b.textContent !== sub) { b.textContent = sub; }
+    if (t.textContent !== tm) { t.textContent = tm; }
   }
 }
 function tick() {
