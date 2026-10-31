@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TV Home</title>
+<script>(function () { var s = Math.min(innerWidth / 1920, innerHeight / 1080); if (s > 0 && isFinite(s)) { document.documentElement.style.setProperty("--s", s); } })();</script>
 <style>
   :root, [data-theme="midnight"] {
     --bg1:#0b0e22; --bg2:#1b2250; --blob1:rgba(110,125,255,.55); --blob2:rgba(190,90,255,.35);
@@ -33,7 +34,7 @@
   .b1 { background:radial-gradient(circle, var(--blob1) 0%, transparent 65%); top:-400px; left:-300px; }
   .b2 { background:radial-gradient(circle, var(--blob2) 0%, transparent 65%); bottom:-500px; right:-300px; }
 
-  #stage { position:relative; z-index:1; width:1920px; height:1080px; flex:none; transform-origin:center center; overflow:hidden; }
+  #stage { position:relative; z-index:1; width:1920px; height:1080px; flex:none; transform-origin:center center; transform:scale(var(--s,1)); overflow:hidden; }
   #shift { position:absolute; top:0; left:0; width:1920px; height:1080px; padding:54px 110px 46px;
            display:flex; flex-direction:column; transition:opacity 2s ease, transform 3s ease; }
   body.idle #shift { opacity:.16; }
@@ -323,7 +324,7 @@ function loadUfc() {
   x.onerror = function () {}; x.ontimeout = function () {}; x.send();
 }
 try { var uc = JSON.parse(lsGet("tvUfc") || "[]"); UF.ev = uc.filter(function (e) { return e.t > Date.now() - 4 * 3600000; }); } catch (e) {}
-renderUfc(); loadUfc(); setInterval(loadUfc, 3 * 3600000);
+renderUfc(); setTimeout(loadUfc, 1800); setInterval(loadUfc, 3 * 3600000);
 setInterval(function () {
   if (UF.ev.length < 2) { return; }
   $("ufc").className = "fade"; setTimeout(function () { UF.i++; renderUfc(); }, 650);
@@ -439,7 +440,8 @@ function loadWeather() {
     else { $("wIcon").innerHTML = ""; $("wDesc").textContent = "Weather unavailable"; $("wFeels").textContent = ""; $("wPlace").textContent = S.place; $("forecast").innerHTML = ""; }
   });
 }
-loadWeather(); setInterval(loadWeather, 10 * 60 * 1000);
+try { var wc0 = JSON.parse(lsGet("tvWx") || "null"); if (wc0 && wc0.key === wxKey() && wc0.data && wc0.data.current) { renderWx(wc0.data, false, wc0.t); } } catch (e) {}
+setTimeout(loadWeather, 1800); setInterval(loadWeather, 10 * 60 * 1000);
 /* keep time and weather fresh even if the TV paused the app: refresh on resume, and re-check every minute */
 function refreshNow() { tick(); if (Date.now() - wxLast > 5 * 60 * 1000) { loadWeather(); } }
 document.addEventListener("visibilitychange", function () { if (!document.hidden) { refreshNow(); } });
@@ -615,7 +617,7 @@ addEventListener("keydown", function (e) {
   }
   var sc = document.createElement("script");
   sc.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
-  sc.onload = draw; document.head.appendChild(sc);
+  sc.onload = draw; setTimeout(function () { document.head.appendChild(sc); }, 3000);
 })();
 
 /* ---- remember the selected control (so coming back from an app lands in the same place) ---- */
