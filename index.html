@@ -59,11 +59,12 @@
   #pill { position:absolute; top:70px; left:0; right:0; text-align:center; pointer-events:none; }
   #pill span { display:inline-block; font-size:44px; background:var(--card); padding:10px 34px; border-radius:36px; }
 
-  #forecast { display:flex; justify-content:center; margin-top:26px; min-height:130px; }
+  #forecast { display:flex; justify-content:center; margin-top:22px; min-height:156px; }
   .day { background:var(--card2); border-radius:28px; padding:12px 0; margin:0 12px; width:190px; text-align:center; }
   .dName { font-size:26px; color:var(--muted); }
   .dIcon { height:52px; margin:4px 0; }
   .dIcon svg { width:52px; height:52px; }
+  .dLab { font-size:21px; color:var(--muted); white-space:nowrap; margin-bottom:4px; }
   .dTemps { font-size:28px; }
   .dTemps span { color:var(--muted); }
 
@@ -451,7 +452,7 @@ function renderWx(j, stale, when) {
     var p = d.time[i].split("-"), dt = new Date(+p[0], +p[1] - 1, +p[2]);
     var name = i === 0 ? "Today" : dt.toLocaleDateString(undefined, { weekday:"short" });
     html += '<div class="day"><div class="dName">' + name + '</div><div class="dIcon">' + wxIcon(d.weather_code[i]) +
-      '</div><div class="dTemps">' + Math.round(d.temperature_2m_max[i]) + deg + ' <span>' + Math.round(d.temperature_2m_min[i]) + deg + '</span></div></div>';
+      '</div><div class="dLab">' + wxText(d.weather_code[i]) + '</div><div class="dTemps">' + Math.round(d.temperature_2m_max[i]) + deg + ' <span>' + Math.round(d.temperature_2m_min[i]) + deg + '</span></div></div>';
   }
   $("forecast").innerHTML = html;
 }
