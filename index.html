@@ -121,60 +121,24 @@
            padding:10px 22px; width:430px; margin-right:16px; }
   .msg { font-size:24px; color:var(--muted); min-height:30px; margin:-4px 0 4px 340px; }
 
-  #pairBody { display:flex; align-items:center; margin:8px 0; }
-  #pairQr { width:300px; height:300px; margin-right:50px; flex:none; background:var(--card); border-radius:18px; }
-  #pairQr svg { width:300px; height:300px; display:block; background:#fff; border-radius:18px; }
-  #pairPin { font-size:110px; font-weight:300; letter-spacing:10px; margin:6px 0; }
   .lab { font-size:30px; color:var(--muted); }
-  #pairStatus { font-size:30px; margin-top:6px; }
-  #pairUrl { font-size:20px; color:var(--muted); margin-top:14px; word-break:break-all; max-width:600px; }
 
 
   #toast { position:absolute; left:0; right:0; bottom:150px; text-align:center; pointer-events:none; opacity:0; transition:opacity .4s ease; z-index:10; }
   #toast span { display:inline-block; font-size:32px; background:var(--panel); color:var(--text); padding:14px 34px; border-radius:30px; }
   #toast.show { opacity:1; }
 
-  /* phone remote page (opened from the QR code on a phone) */
-  #remote { display:none; padding:22px 18px 40px; max-width:520px; margin:0 auto; text-align:center; }
-  html.phonemode, html.phonemode body { overflow:auto; height:auto; min-height:100%; }
-  html.phonemode body { display:block; }
-  html.phonemode #stage, html.phonemode #aurora { display:none; }
-  html.phonemode #remote { display:block; }
-  #remote h1 { font-size:34px; font-weight:400; margin:6px 0 16px; }
-  #rMsg { font-size:20px; color:var(--muted); min-height:28px; margin:8px 0 14px; }
-  #rMsg.bad { color:#ff9a9a; }
-  #rPin { font:inherit; font-size:34px; letter-spacing:8px; text-align:center; width:100%; padding:16px; border-radius:20px; border:0;
-          background:rgba(255,255,255,.12); color:var(--text); margin-bottom:14px; }
-  .rb { font:inherit; font-size:24px; color:var(--text); background:rgba(255,255,255,.14); border:0; border-radius:22px; padding:20px 0; width:100%; }
-  .rb:active { background:rgba(255,255,255,.3); }
-  .rgrid { display:grid; grid-template-columns:repeat(3,1fr); grid-gap:12px; margin:12px 0; }
-  .rgrid.five { grid-template-columns:repeat(5,1fr); }
-  .rgrid.two { grid-template-columns:repeat(2,1fr); }
-  .rb.ok { background:var(--accent); color:#0b0e22; font-weight:600; }
-  .rlab { font-size:18px; color:var(--muted); text-align:left; margin:18px 0 6px; }
+  /* small QR code: scan with a phone to open the phone remote */
+  #qrBox { display:flex; align-items:center; margin-right:30px; }
+  #qrBox.hidden { display:none; }
+  #qrLab { font-size:21px; color:var(--muted); text-align:right; margin-right:16px; line-height:1.25; }
+  #qrImg { width:116px; height:116px; background:#fff; border-radius:12px; padding:6px; box-sizing:border-box; }
+  #qrImg svg { width:104px; height:104px; display:block; }
 </style>
 </head>
 <body data-theme="midnight">
 <div id="aurora"><div class="blob b1"></div><div class="blob b2"></div></div>
 
-<div id="remote">
-  <h1>TV Remote</h1>
-  <div id="rMsg">Type the 6-digit code shown on the TV.</div>
-  <div id="rJoin">
-    <input id="rPin" type="text" inputmode="numeric" maxlength="6" placeholder="------" autocomplete="off">
-    <button class="rb ok" id="rGo">Connect</button>
-  </div>
-  <div id="rPad" style="display:none">
-    <div class="rgrid">
-      <div></div><button class="rb" data-k="up">&#9650;</button><div></div>
-      <button class="rb" data-k="left">&#9664;</button><button class="rb ok" data-k="ok">OK</button><button class="rb" data-k="right">&#9654;</button>
-      <button class="rb" data-k="back">Back</button><button class="rb" data-k="down">&#9660;</button><div></div>
-    </div>
-    <div class="rlab">Open</div>
-    <div class="rgrid" id="rTiles"></div>
-    <div class="rgrid two"><button class="rb" id="rTheme">Next theme</button><button class="rb" id="rBye">Disconnect</button></div>
-  </div>
-</div>
 
 <div id="stage">
  <div id="shift">
@@ -199,8 +163,8 @@
   <footer>
     <div id="hint"></div>
     <div id="controls">
+      <div id="qrBox" class="hidden"><div id="qrLab">Scan for<br>phone remote</div><div id="qrImg"></div></div>
       <div id="swatches" style="display:flex;align-items:center"></div>
-      <button class="btn f" id="phoneBtn" tabindex="0">Phone</button>
       <button class="btn f" id="setBtn" tabindex="0">Settings</button>
     </div>
   </footer>
@@ -236,108 +200,12 @@
   </div>
  </div>
 
- <div id="pairPanel" class="overlay hidden">
-  <div class="box">
-    <h2>Phone remote</h2>
-    <div id="pairBody">
-      <div id="pairQr"></div>
-      <div>
-        <div class="lab">1. Scan this with your phone camera</div>
-        <div class="lab">2. Type this code on your phone:</div>
-        <div id="pairPin">------</div>
-        <div id="pairStatus">Starting&hellip;</div>
-        <div id="pairUrl"></div>
-      </div>
-    </div>
-    <div class="note">Anyone with the code can control this dashboard (not the TV itself). Turn it off when you're done.</div>
-    <div class="row"><button class="btn f" id="pairOff" tabindex="0">Turn off remote</button><button class="btn f" id="pairDone" tabindex="0">Done</button></div>
-  </div>
- </div>
-
  <div id="toast"><span id="toastMsg"></span></div>
 </div>
 
-<script>
-/* Phone side: runs only when this page is opened from the TV's QR code (?remote=...) */
-window.TVH_LIBS = {
-  qr: "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"
-};
-(function () {
-  var m = /[?&]remote=([A-Za-z0-9_-]+)/.exec(location.search);
-  if (!m) { return; }
-  window.__PHONE = true;
-  var topic = m[1], NTFY = "https://ntfy.sh/";
-  document.documentElement.className = "phonemode";
-  function $(id) { return document.getElementById(id); }
-  var sid = "", n = 0, es = null, authed = false;
-  function msg(t, bad) { $("rMsg").textContent = t; $("rMsg").className = bad ? "bad" : ""; }
-  function show(pad) { $("rJoin").style.display = pad ? "none" : ""; $("rPad").style.display = pad ? "" : "none"; }
-  function post(o, cb) {
-    try { fetch(NTFY + topic, { method: "POST", body: JSON.stringify(o) }).then(function (r) { cb(r.ok, r.status); }).catch(function () { cb(false, 0); }); }
-    catch (e) { cb(false, 0); }
-  }
-  function send(c) {
-    if (!authed) { msg("Not connected", true); show(false); return; }
-    n++;
-    post({ t: "cmd", sid: sid, n: n, c: c }, function (ok, st) {
-      if (!ok) { msg(st === 429 ? "Slow down a moment…" : "Could not send. Check your internet.", true); }
-      else if ($("rMsg").className) { msg("Connected"); }
-    });
-    try { if (navigator.vibrate) { navigator.vibrate(15); } } catch (e) {}
-  }
-  var names = ["Netflix", "YouTube", "Prime", "Viu", "Spotify", "PS5"];
-  names.forEach(function (nm, i) {
-    var b = document.createElement("button"); b.className = "rb"; b.textContent = String(i + 1); b.title = nm;
-    b.addEventListener("click", function () { send({ t: "tile", i: i }); }); $("rTiles").appendChild(b);
-  });
-  Array.prototype.forEach.call(document.querySelectorAll("[data-k]"), function (b) { b.addEventListener("click", function () { send({ t: "key", k: b.getAttribute("data-k") }); }); });
-  $("rTheme").addEventListener("click", function () { send({ t: "theme" }); });
-  function leave(note) {
-    authed = false; try { if (es) { es.close(); } } catch (e) {}
-    show(false); $("rGo").disabled = false; msg(note || "Disconnected. Enter the code to reconnect.", !!note);
-  }
-  $("rBye").addEventListener("click", function () { if (authed) { post({ t: "bye", sid: sid }, function () {}); } leave(""); msg("Disconnected. Enter the code to reconnect.", true); });
-  function rnd(len) {
-    var c = "abcdefghijklmnopqrstuvwxyz0123456789", out = "", a = null;
-    try { a = new Uint8Array(len); crypto.getRandomValues(a); } catch (e) { a = null; }
-    for (var i = 0; i < len; i++) { out += c.charAt((a ? a[i] : Math.floor(Math.random() * 256)) % 36); }
-    return out;
-  }
-  function connect() {
-    var pin = $("rPin").value.replace(/\D/g, "");
-    if (pin.length !== 6) { msg("Enter the 6-digit code shown on the TV.", true); return; }
-    msg("Connecting…"); $("rGo").disabled = true;
-    try { if (es) { es.close(); } } catch (e) {}
-    sid = rnd(14); n = 0; authed = false;
-    var done = false, sent = false;
-    var to = setTimeout(function () {
-      if (done) { return; } done = true;
-      msg("Could not reach the TV. Is the remote switched on?", true); $("rGo").disabled = false; try { es.close(); } catch (e) {}
-    }, 15000);
-    function fail(t) { if (done) { return; } done = true; clearTimeout(to); msg(t, true); $("rGo").disabled = false; try { es.close(); } catch (e) {} }
-    try {
-      es = new EventSource(NTFY + topic + "-r/sse");
-      es.addEventListener("open", function () {
-        if (sent) { return; } sent = true;
-        post({ t: "hello", sid: sid, pin: pin }, function (ok, st) { if (!ok) { fail(st === 429 ? "Too many tries. Wait a moment." : "Could not reach the internet service. Check your connection."); } });
-      });
-      es.addEventListener("message", function (e) {
-        var d; try { d = JSON.parse(JSON.parse(e.data).message); } catch (x) { return; }
-        if (!d || d.sid !== sid) { return; }
-        if (d.t === "ok") { done = true; clearTimeout(to); authed = true; show(true); msg("Connected"); }
-        else if (d.t === "err") { done = true; clearTimeout(to); if (authed) { leave(d.m || "Error"); } else { msg(d.m || "Error", true); $("rGo").disabled = false; try { es.close(); } catch (e2) {} } }
-        else if (d.t === "bye") { leave(""); msg("Disconnected. Enter the code to reconnect.", true); }
-      });
-    } catch (e) { fail("Could not start the remote."); }
-  }
-  $("rGo").addEventListener("click", connect);
-  $("rPin").addEventListener("keydown", function (e) { if (e.keyCode === 13) { connect(); } });
-})();
-</script>
 
 <script>
 (function () {
-if (window.__PHONE) { return; }
 
 /* ---------- EDIT THESE (or use Settings on the TV) ---------- */
 var DEFAULTS = { tz:"Etc/GMT+6", place:"Calgary", lat:51.05, lon:-114.07, units:"celsius", hour12:true, anim:true, idleMin:15, theme:"midnight",
@@ -712,81 +580,16 @@ addEventListener("keydown", function (e) {
   e.preventDefault(); move(d);
 });
 
-/* ---- phone remote (off until you open "Phone"; commands travel through the free ntfy.sh message service, so any network works) ---- */
-var es = null, authedSid = "", pin = "", tries = 0, remoteUrl = "", topic = "", lastN = 0;
-var NTFY = "https://ntfy.sh/";
-function loadScript(src, ok, fail) { var s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s); }
-function newPin() {
-  var n; try { var a = new Uint32Array(1); crypto.getRandomValues(a); n = a[0] % 1000000; } catch (e) { n = Math.floor(Math.random() * 1000000); }
-  return ("00000" + n).slice(-6);
-}
-function rid() {
-  var c = "abcdefghijklmnopqrstuvwxyz0123456789", s = "", a = null;
-  try { a = new Uint8Array(22); crypto.getRandomValues(a); } catch (e) { a = null; }
-  for (var i = 0; i < 22; i++) { s += c.charAt((a ? a[i] : Math.floor(Math.random() * 256)) % 36); }
-  return "tvh" + s;
-}
-function reply(o) { try { fetch(NTFY + topic + "-r", { method: "POST", body: JSON.stringify(o) }).catch(function () {}); } catch (e) {} }
-function setPair(t) { $("pairStatus").textContent = t; }
-function renderPair() {
-  $("pairPin").textContent = pin ? pin.slice(0, 3) + " " + pin.slice(3) : "------";
-  $("pairUrl").textContent = remoteUrl;
-  setPair(authedSid ? "Phone connected ✓" : (remoteUrl ? "Waiting for your phone…" : "Starting…"));
-  $("phoneBtn").textContent = authedSid ? "Phone ●" : "Phone";
-  var html = "";
-  try { if (window.qrcode && remoteUrl) { var qr = window.qrcode(0, "M"); qr.addData(remoteUrl); qr.make(); html = qr.createSvgTag(6, 2); } } catch (e) { html = ""; }
-  $("pairQr").innerHTML = html;
-}
-function startRemote() {
-  if (es) { renderPair(); return; }
-  pin = ""; remoteUrl = ""; $("pairQr").innerHTML = ""; renderPair(); setPair("Starting…");
-  loadScript(window.TVH_LIBS.qr, initRemote, initRemote);
-}
-function initRemote() {
-  try {
-    topic = rid(); pin = newPin(); tries = 0; authedSid = ""; lastN = 0;
-    es = new EventSource(NTFY + topic + "/sse");
-    es.addEventListener("open", function () { if (!remoteUrl) { remoteUrl = (/^https?:$/.test(location.protocol) ? location.origin + location.pathname : "https://unorthodox15.github.io/tv-dashboard/") + "?remote=" + topic; } renderPair(); });
-    es.addEventListener("message", function (e) {
-      var d; try { d = JSON.parse(JSON.parse(e.data).message); } catch (x) { return; }
-      onMsg(d);
-    });
-    es.onerror = function () { if (es && es.readyState === 2) { setPair("Remote problem: connection closed"); } };
-  } catch (e) { es = null; setPair("Could not start the remote."); }
-}
-function stopRemote() {
-  try { if (es) { es.close(); } } catch (e) {}
-  es = null; authedSid = ""; pin = ""; remoteUrl = ""; topic = ""; $("phoneBtn").textContent = "Phone"; toast("Phone remote off");
-}
-function onMsg(d) {
-  if (!d || typeof d !== "object" || !d.sid) { return; }
-  if (d.t === "hello") {
-    if (authedSid && d.sid !== authedSid) { reply({ t:"err", sid:d.sid, m:"Another phone is already connected." }); return; }
-    if (authedSid === d.sid) { reply({ t:"ok", sid:d.sid }); return; }
-    if (pin && String(d.pin) === pin) { authedSid = d.sid; tries = 0; lastN = 0; reply({ t:"ok", sid:d.sid }); renderPair(); toast("Phone connected"); }
-    else {
-      tries++; reply({ t:"err", sid:d.sid, m:"Wrong code." });
-      if (tries >= 5) { pin = newPin(); tries = 0; renderPair(); }
-    }
-    return;
+/* ---- small QR code: opens the phone remote (remote.html) when scanned ---- */
+(function () {
+  var URL = "https://unorthodox15.github.io/tv-dashboard/remote.html";
+  function draw() {
+    try { var q = window.qrcode(0, "M"); q.addData(URL); q.make(); $("qrImg").innerHTML = q.createSvgTag(4, 0); $("qrBox").className = ""; } catch (e) {}
   }
-  if (d.sid !== authedSid) { if (d.t === "cmd") { reply({ t:"err", sid:d.sid, m:"Enter the code again." }); } return; }
-  if (d.t === "bye") { authedSid = ""; renderPair(); toast("Phone disconnected"); return; }
-  if (d.t === "cmd" && typeof d.n === "number" && d.n > lastN && d.c) { lastN = d.n; wake(); handleCmd(d.c); }
-}
-function handleCmd(d) {
-  if (d.t === "key") {
-    var k = d.k, a = document.activeElement;
-    if (KEYDIR[k]) { move(KEYDIR[k]); }
-    else if (k === "ok") { if (a && a.click && a.tagName !== "INPUT") { a.click(); } }
-    else if (k === "back") { closeOverlay(); }
-  }
-  else if (d.t === "tile") { var i = d.i | 0, t = $("tile" + i); if (t && i >= 0 && i < TILES.length) { t.click(); } }
-  else if (d.t === "theme") { nextTheme(); }
-}
-$("phoneBtn").addEventListener("click", function () { renderPair(); openOverlay("pairPanel", "pairDone", "phoneBtn"); startRemote(); });
-$("pairDone").addEventListener("click", closeOverlay);
-$("pairOff").addEventListener("click", function () { stopRemote(); closeOverlay(); });
+  var sc = document.createElement("script");
+  sc.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
+  sc.onload = draw; document.head.appendChild(sc);
+})();
 
 /* ---- remember the selected control (so coming back from an app lands in the same place) ---- */
 document.addEventListener("focusin", function (e) {
