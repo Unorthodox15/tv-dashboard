@@ -67,6 +67,7 @@
   .u b { display:block; font-size:52px; font-weight:300; line-height:1.08; font-variant-numeric:tabular-nums; }
   .u i { display:block; font-style:normal; font-size:12px; letter-spacing:2px; color:var(--muted); margin-top:-2px; }
   .cdDone { display:none; font-size:44px; font-weight:300; padding:8px 0; }
+  .cd.gone { display:none; }
   .cd.done .cdG { display:none; }
   .cd.done .cdDone { display:block; }
   #hourly { display:flex; justify-content:center; margin-top:22px; min-height:156px; }
@@ -108,7 +109,7 @@
 
   .f { outline:none; border:5px solid transparent; transition:transform .12s ease-out, border-color .12s ease-out; }
   .tile.f { border-width:6px; }
-  .f:focus { transform:scale(1.07); border-color:var(--accent); box-shadow:0 0 0 7px var(--glow), 0 22px 50px rgba(0,0,0,.35); }
+  .f:focus { transform:scale(1.07); border-color:var(--accent); box-shadow:0 0 0 7px var(--glow), 0 10px 22px rgba(0,0,0,.3); }
   .tile.f:focus { transform:scale(1.09); }
   .sw.f:focus { transform:scale(1.25); }
 
@@ -136,6 +137,13 @@
   /* small QR code: scan with a phone to open the phone remote */
   #qrBox { display:flex; align-items:center; }
   #qrBox.hidden { display:none; }
+  #ufc { display:flex; align-items:center; flex:1; justify-content:center; min-width:0; margin:0 30px; transition:opacity .6s ease; }
+  #ufc.hidden { display:none; }
+  #ufc.fade { opacity:0; }
+  #ufcLab { font-size:20px; font-weight:700; letter-spacing:3px; color:#fff; background:#c4202e; border-radius:10px; padding:6px 14px; margin-right:20px; flex:none; }
+  #ufcTxt { min-width:0; text-align:left; }
+  #ufcA { font-size:21px; color:var(--muted); white-space:nowrap; }
+  #ufcB { font-size:28px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:760px; }
   #qrLab { font-size:21px; color:var(--muted); text-align:left; margin-left:16px; line-height:1.25; }
   #qrImg { width:116px; height:116px; background:#fff; border-radius:12px; padding:6px; box-sizing:border-box; }
   #qrImg svg { width:104px; height:104px; display:block; }
@@ -167,6 +175,7 @@
 
   <footer>
     <div id="qrBox" class="hidden"><div id="qrImg"></div><div id="qrLab">Scan for<br>virtual remote</div></div>
+    <div id="ufc" class="hidden"><div id="ufcLab">UFC</div><div id="ufcTxt"><div id="ufcA"></div><div id="ufcB"></div></div></div>
     <div id="controls">
       <div id="swatches" style="display:flex;align-items:center"></div>
       <button class="btn f" id="setBtn" tabindex="0">Settings</button>
@@ -277,9 +286,10 @@ function renderCd(today) {
       for (var k = 0; k < 4; k++) { var t = k === 0 ? String(v[k]) : p2(v[k]); if (us[k].textContent !== t) { us[k].textContent = t; } }
       card.className = "cd";
     } else {
-      var d = card.lastChild, txt = ms > -86400000 ? "Out today!" : "Out now";
-      if (d.textContent !== txt) { d.textContent = txt; }
-      card.className = "cd done";
+      /* stays up for one day after zero as "Countdown complete", then the card disappears */
+      var d = card.lastChild;
+      if (ms > -86400000) { if (d.textContent !== "Countdown complete!") { d.textContent = "Countdown complete!"; } card.className = "cd done"; }
+      else { card.className = "cd gone"; }
     }
   }
 }
@@ -290,6 +300,42 @@ function tick() {
   $("greet").textContent = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
   if (S.theme === "auto") { applyTheme(); }
 }
+/* upcoming UFC events (ESPN's free schedule feed); shows the next few, one at a time */
+var UF = { ev: [], i: 0 };
+function renderUfc() {
+  var box = $("ufc");
+  if (!UF.ev.length) { box.className = "hidden"; return; }
+  var e = UF.ev[UF.i % UF.ev.length], z = zoned(new Date(e.t)), t = timeStr(z);
+  var when = z.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" }) + " \u00b7 " + t.t + (t.ap ? " " + t.ap : "");
+  $("ufcA").textContent = e.n + " \u00b7 " + when;
+  $("ufcB").textContent = e.m || "Card to be announced";
+  box.className = "";
+}
+function loadUfc() {
+  var d0 = Date.now(), f = function (t) { var d = new Date(t); return d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()); };
+  var x = new XMLHttpRequest();
+  x.open("GET", "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard?limit=40&dates=" + f(d0 - 86400000) + "-" + f(d0 + 150 * 86400000));
+  x.timeout = 15000;
+  x.onload = function () {
+    try {
+      var j = JSON.parse(x.responseText), out = [], evs = j.events || [];
+      for (var i = 0; i < evs.length; i++) {
+        var e = evs[i], cs = e.competitions || [], m = cs.length ? cs[cs.length - 1] : null, nm = [];
+        if (m && m.competitors) { for (var k = 0; k < m.competitors.length; k++) { var a = m.competitors[k].athlete; if (a && a.displayName) { nm.push(a.displayName); } } }
+        out.push({ n:e.name || "UFC", t:Date.parse(e.date), m:nm.length === 2 ? nm[0] + " vs " + nm[1] : "" });
+      }
+      out = out.filter(function (e) { return e.t > Date.now() - 4 * 3600000; }).sort(function (a, b) { return a.t - b.t; }).slice(0, 4);
+      if (out.length) { UF.ev = out; lsSet("tvUfc", JSON.stringify(out)); UF.i = 0; renderUfc(); }
+    } catch (e) {}
+  };
+  x.onerror = function () {}; x.ontimeout = function () {}; x.send();
+}
+try { var uc = JSON.parse(lsGet("tvUfc") || "[]"); UF.ev = uc.filter(function (e) { return e.t > Date.now() - 4 * 3600000; }); } catch (e) {}
+renderUfc(); loadUfc(); setInterval(loadUfc, 3 * 3600000);
+setInterval(function () {
+  if (UF.ev.length < 2) { return; }
+  $("ufc").className = "fade"; setTimeout(function () { UF.i++; renderUfc(); }, 650);
+}, 9000);
 tick(); setInterval(tick, 1000);
 
 /* ---- weather icons: drawn by the page, so they look the same on every TV ---- */
