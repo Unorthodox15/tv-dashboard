@@ -272,6 +272,7 @@
 
 <script>
 /* Phone side: runs only when this page is opened from the TV's QR code (?remote=...) */
+window.TVH_ICE = { iceServers: [ {urls:"stun:stun.l.google.com:19302"}, {urls:"stun:stun1.l.google.com:19302"}, {urls:"stun:openrelay.metered.ca:80"}, {urls:"turn:openrelay.metered.ca:80",username:"openrelayproject",credential:"openrelayproject"}, {urls:"turn:openrelay.metered.ca:443",username:"openrelayproject",credential:"openrelayproject"}, {urls:"turn:openrelay.metered.ca:443?transport=tcp",username:"openrelayproject",credential:"openrelayproject"} ] };
 window.TVH_LIBS = {
   peer: "https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js",
   qr:   "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"
@@ -307,7 +308,7 @@ window.TVH_LIBS = {
     function start() {
       try {
         if (peer) { try { peer.destroy(); } catch (e) {} }
-        peer = new Peer();
+        peer = new Peer({ config: window.TVH_ICE });
         peer.on("open", function () {
           conn = peer.connect(tvId, { reliable: true });
           var to = setTimeout(function () { msg("Could not reach the TV. Is the remote switched on?", true); $("rGo").disabled = false; }, 15000);
@@ -339,9 +340,9 @@ if (window.__PHONE) { return; }
 var DEFAULTS = { place:"Calgary", lat:51.05, lon:-114.07, units:"celsius", hour12:true, anim:true, idleMin:15, theme:"midnight",
                  spotify:"https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M" };
 var TILES = [
-  { name:"Netflix",     url:"https://www.netflix.com",    color:"#e50914", letter:"N" },
-  { name:"YouTube",     url:"https://www.youtube.com/tv", color:"#ff0000", letter:"▶" },
-  { name:"Prime Video", url:"https://www.primevideo.com", color:"#00a8e1", letter:"P" },
+  { name:"Netflix",     appId:"netflix",             url:"https://www.netflix.com",    color:"#e50914", letter:"N" },
+  { name:"YouTube",     appId:"youtube.leanback.v4", url:"https://www.youtube.com/tv", color:"#ff0000", letter:"▶" },
+  { name:"Prime Video", appId:"amazon",              url:"https://www.primevideo.com", color:"#00a8e1", letter:"P" },
   { name:"Viu",         url:"https://viu.to/",            color:"#e8a317", letter:"V" },
   { name:"Spotify",     action:"music",                    color:"#1db954", letter:"S" }
 ];
@@ -472,6 +473,14 @@ loadWeather(); setInterval(loadWeather, 15 * 60 * 1000);
 
 /* ---- tiles ---- */
 var MUSIC_INDEX = -1;
+/* Launch a real TV app when running as an installed LG app (PalmServiceBridge exists); otherwise the tile just opens the web page. */
+function launchApp(id, fail) {
+  try {
+    var b = new window.PalmServiceBridge();
+    b.onservicecallback = function (r) { try { var o = JSON.parse(r); if (o.returnValue === false) { fail(); } } catch (e) { fail(); } };
+    b.call("luna://com.webos.applicationManager/launch", JSON.stringify({ id: id }));
+  } catch (e) { fail(); }
+}
 function buildTiles() {
   var m = $("tiles"), w = Math.min(440, Math.floor(1700 / TILES.length) - 44);
   $("hint").textContent = "OK to open · press 1–" + TILES.length + " to launch · arrows to move";
@@ -480,13 +489,15 @@ function buildTiles() {
     a.className = "tile f" + (w < 340 ? " sm" : ""); a.id = "tile" + i; a.setAttribute("tabindex", "0");
     a.style.width = w + "px";
     if (t.action === "music") { a.href = "#"; MUSIC_INDEX = i; a.addEventListener("click", function (e) { e.preventDefault(); openMusic(); }); }
-    else { a.href = t.url; }
+    else { a.href = t.url; if (t.appId) { a.addEventListener("click", function (e) { if (window.PalmServiceBridge) { e.preventDefault(); launchApp(t.appId, function () { location.href = t.url; }); } }); } }
     a.innerHTML = '<span class="num">' + (i + 1) + '</span><div class="logo" style="background:' + t.color + '">' + t.letter + '</div><div class="tname">' + t.name + '</div>';
     a.addEventListener("mouseenter", function () { a.focus(); });
     m.appendChild(a);
   });
 }
 buildTiles();
+/* pointer (Magic Remote / mouse): hovering any control highlights it, no click needed */
+document.addEventListener("mouseover", function (e) { var el = e.target; while (el && el !== document.body) { if (el.classList && el.classList.contains("f") && el.focus) { if (document.activeElement !== el) { el.focus(); } return; } el = el.parentNode; } });
 
 /* ---- themes ---- */
 function autoTheme() { var h = new Date().getHours(); return (h >= 6 && h < 18) ? "ocean" : "midnight"; }
@@ -731,7 +742,7 @@ function startRemote() {
 function initRemote() {
   try {
     var id = rid(); pin = newPin(); tries = 0;
-    peer = new window.Peer(id);
+    peer = new window.Peer(id, { config: window.TVH_ICE });
     peer.on("open", function () { remoteUrl = location.origin + location.pathname + "?remote=" + id; renderPair(); });
     peer.on("connection", onConn);
     peer.on("error", function (e) { setPair("Remote problem: " + ((e && e.type) || "unknown")); });
