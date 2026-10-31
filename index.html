@@ -216,8 +216,9 @@
     <div class="row"><label>Time zone</label><button class="btn f" id="tzBtn" tabindex="0"></button></div>
     <div class="row"><label>Moving background</label><button class="btn f" id="animBtn" tabindex="0"></button></div>
     <div class="row"><label>Dim when idle</label><button class="btn f" id="idleBtn" tabindex="0"></button></div>
-    <div class="row"><label>Spotify link</label><input id="spIn" class="field f" type="text" tabindex="0" placeholder="Paste a Spotify link"><button class="btn f" id="spGo" tabindex="0">Save</button></div>
+    <div class="row" id="spRow"><label>Web player playlist</label><input id="spIn" class="field f" type="text" tabindex="0" placeholder="Paste a Spotify link"><button class="btn f" id="spGo" tabindex="0">Save</button></div>
     <div class="msg" id="spMsg"></div>
+    <!-- (the two lines above are only for the web version; the TV app opens the real Spotify app) -->
     <div class="row"><button class="btn f" id="doneBtn" tabindex="0">Done</button></div>
   </div>
  </div>
@@ -618,6 +619,7 @@ function saveSpotify() {
   S.spotify = v; save(); msg.textContent = "Saved. Open Spotify to see it.";
 }
 $("spGo").addEventListener("click", saveSpotify);
+if (window.PalmServiceBridge) { $("spRow").style.display = "none"; $("spMsg").style.display = "none"; }
 $("spIn").addEventListener("keydown", function (e) { if (e.keyCode === 13) { saveSpotify(); } });
 
 /* ---- timer ---- */
