@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0f1226"><title>TV Remote</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;background:#0f1226;color:#eef;font-family:system-ui,Segoe UI,Roboto,sans-serif;touch-action:manipulation}
+body{min-height:100vh;padding:14px 14px 30px;max-width:460px;margin:0 auto}
+h1{font-size:19px;font-weight:600;margin:6px 0 2px;text-align:center}
+#st{text-align:center;font-size:14px;color:#9aa;min-height:20px;margin-bottom:10px}
+#st.ok{color:#7fe3a1}#st.bad{color:#ff9b9b}
+.card{background:#1a1f3d;border-radius:18px;padding:14px;margin-bottom:12px}
+.card p{margin:6px 0;font-size:14px;color:#b9bfe0;line-height:1.4}
+input{width:100%;font-size:18px;padding:12px;border-radius:12px;border:0;background:#262c55;color:#fff;margin:6px 0}
+button{font:inherit;color:#fff;border:0;border-radius:16px;background:#2a3166;font-size:18px;min-height:56px;width:100%;touch-action:manipulation}
+button:active{background:#4a55b8}
+a.btn{display:block;text-align:center;text-decoration:none;color:#fff;background:#2a3166;border-radius:16px;padding:16px;margin:8px 0;font-size:17px}
+.pri{background:#7c8cff;color:#10142e;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);grid-gap:10px}
+.row{display:grid;grid-gap:10px;margin-top:10px}
+.r2{grid-template-columns:repeat(2,1fr)}.r3{grid-template-columns:repeat(3,1fr)}.r4{grid-template-columns:repeat(4,1fr)}
+.dp button{min-height:74px;font-size:26px}
+.ok{}#bOk{background:#7c8cff;color:#10142e;font-weight:700}
+.sm{font-size:15px;min-height:50px}
+.pw{background:#5a2236}
+.hid{display:none}
+.lab{font-size:12px;letter-spacing:2px;color:#8a90b8;margin:14px 2px 6px}
+#pad{height:120px;border-radius:16px;background:#1a1f3d;display:flex;align-items:center;justify-content:center;color:#6b72a0;font-size:14px;touch-action:none;margin-top:10px}
+</style></head><body>
+<h1>TV Remote</h1><div id="st">Starting…</div>
+
+<div id="setup" class="card hid">
+  <p><b>One-time setup</b> (same Wi-Fi as the TV)</p>
+  <p>TV address</p><input id="ip" inputmode="decimal" placeholder="192.168.1.78" autocomplete="off">
+  <a class="btn" id="trust" target="_blank" rel="noopener">1. Trust the TV (opens a page that says “Hello world”)</a>
+  <p style="font-size:13px">On that page tap Advanced → Proceed. When it says “Hello world”, come back here.</p>
+  <button class="pri" id="go">2. Connect</button>
+  <p style="font-size:13px">The TV will ask “allow this device?” — press OK on the TV remote.</p>
+</div>
+
+<div id="rem" class="hid">
+  <div class="grid dp">
+    <button class="sm" data-p="HOME">Home</button><button data-p="UP" data-rep="1">▲</button><button class="sm" data-p="BACK">Back</button>
+    <button data-p="LEFT" data-rep="1">◀</button><button id="bOk" data-p="ENTER">OK</button><button data-p="RIGHT" data-rep="1">▶</button>
+    <button class="sm" data-p="MENU">Menu</button><button data-p="DOWN" data-rep="1">▼</button><button class="sm" data-p="EXIT">Exit</button>
+  </div>
+  <div class="row r4">
+    <button class="sm" data-u="ssap://audio/volumeDown" data-rep="1">Vol −</button>
+    <button class="sm" id="bMute">Mute</button>
+    <button class="sm" data-u="ssap://audio/volumeUp" data-rep="1">Vol +</button>
+    <button class="sm pw" id="bPow">Power</button>
+  </div>
+  <div class="row r4">
+    <button class="sm" data-u="ssap://media.controls/rewind">⏪</button>
+    <button class="sm" data-u="ssap://media.controls/play">▶</button>
+    <button class="sm" data-u="ssap://media.controls/pause">⏸</button>
+    <button class="sm" data-u="ssap://media.controls/fastForward">⏩</button>
+  </div>
+  <div class="lab">OPEN</div>
+  <div class="row r3">
+    <button class="sm" data-app="com.callum.tvhome">TV Home</button>
+    <button class="sm" data-app="netflix">Netflix</button>
+    <button class="sm" data-app="youtube.leanback.v4">YouTube</button>
+    <button class="sm" data-app="amazon">Prime</button>
+    <button class="sm" data-app="spotify-beehive">Spotify</button>
+    <button class="sm" data-in="HDMI_2">PS5</button>
+  </div>
+  <div class="lab">TOUCHPAD</div>
+  <div id="pad">Drag to move the pointer · tap to click</div>
+  <div class="row r2" style="margin-top:14px"><button class="sm" id="bFor">Forget this TV</button><button class="sm" id="bRe">Reconnect</button></div>
+</div>
+
+<script>
+(function () {
+  var $ = function (i) { return document.getElementById(i); };
+  var LS = { get: function (k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }, del: function (k) { try { localStorage.removeItem(k); } catch (e) {} } };
+  var ip = LS.get("tvIp") || "192.168.1.78", key = LS.get("tvKey");
+  var ws = null, ps = null, nid = 1, pend = {}, ready = false, pointerWant = null, wantOpen = true, retry = 0, muteState = false;
+  var MANIFEST = { manifestVersion: 1, appVersion: "1.1.0", permissions: ["LAUNCH","LAUNCH_WEBAPP","CONTROL_AUDIO","CONTROL_POWER","CONTROL_INPUT_TEXT","CONTROL_MOUSE_AND_KEYBOARD","CONTROL_INPUT_MEDIA_PLAYBACK","CONTROL_INPUT_TV","CONTROL_INPUT_JOYSTICK","CONTROL_DISPLAY","READ_INSTALLED_APPS","READ_RUNNING_APPS","READ_INPUT_DEVICE_LIST","WRITE_NOTIFICATION_TOAST"] };
+  function st(m, c) { $("st").textContent = m; $("st").className = c || ""; }
+  function show(setup) { $("setup").className = "card" + (setup ? "" : " hid"); $("rem").className = setup ? "hid" : ""; }
+  function buzz() { try { if (navigator.vibrate) { navigator.vibrate(8); } } catch (e) {} }
+
+  function send(uri, payload, cb) {
+    if (!ws || ws.readyState !== 1 || !ready) { st("Not connected — tap Reconnect", "bad"); return; }
+    var id = "r" + (nid++); if (cb) { pend[id] = cb; }
+    var m = { type: "request", id: id, uri: uri }; if (payload) { m.payload = payload; }
+    ws.send(JSON.stringify(m));
+  }
+  function openPointer(then) {
+    if (ps && ps.readyState === 1) { then(); return; }
+    pointerWant = then;
+    if (ps && ps.readyState === 0) { return; }
+    send("ssap://com.webos.service.networkinput/getPointerInputSocket", null, function (r) {
+      if (!r || !r.payload || !r.payload.socketPath) { st("Buttons not allowed by the TV", "bad"); return; }
+      try {
+        ps = new WebSocket(r.payload.socketPath);
+        ps.onopen = function () { if (pointerWant) { var f = pointerWant; pointerWant = null; f(); } };
+        ps.onclose = function () { ps = null; };
+        ps.onerror = function () { st("Button channel failed", "bad"); };
+      } catch (e) { st("Button channel failed", "bad"); }
+    });
+  }
+  function btn(name) { openPointer(function () { try { ps.send("type:button\nname:" + name + "\n\n"); } catch (e) {} }); }
+  function conn() {
+    wantOpen = true; ready = false;
+    try { if (ws) { ws.onclose = null; ws.close(); } } catch (e) {}
+    st("Connecting to " + ip + "…");
+    try { ws = new WebSocket("wss://" + ip + ":3001"); } catch (e) { st("Could not start: " + e.message, "bad"); show(true); return; }
+    var opened = false, me = ws;
+    ws.onopen = function () {
+      opened = true;
+      var p = { forcePairing: false, pairingType: "PROMPT", manifest: MANIFEST }; if (key) { p["client-key"] = key; }
+      ws.send(JSON.stringify({ type: "register", id: "reg", payload: p }));
+    };
+    ws.onmessage = function (e) {
+      var d; try { d = JSON.parse(e.data); } catch (x) { return; }
+      if (d.type === "response" && d.id === "reg" && d.payload && d.payload.pairingType) { st("Press OK on the TV to allow this phone…"); return; }
+      if (d.type === "registered") {
+        key = d.payload && d.payload["client-key"] || key; LS.set("tvKey", key); LS.set("tvIp", ip);
+        ready = true; retry = 0; show(false); st("Connected", "ok"); return;
+      }
+      if (d.type === "error" && d.id === "reg") { st("The TV refused: " + (d.error || "error"), "bad"); key = ""; LS.del("tvKey"); return; }
+      var cb = pend[d.id]; if (cb) { if (d.type !== "error") { delete pend[d.id]; cb(d); } else { delete pend[d.id]; st((d.error || "error").replace(/^\d+\s*/, ""), "bad"); } }
+    };
+    ws.onerror = function () {};
+    ws.onclose = function () {
+      if (me !== ws) { return; }
+      ready = false; ps = null;
+      if (!opened) { st("Can't reach the TV. Same Wi-Fi? TV on? Trust step done?", "bad"); show(true); }
+      else if (wantOpen) { st("Reconnecting…"); retry++; setTimeout(function () { if (wantOpen && !ready) { conn(); } }, Math.min(1000 * retry, 5000)); }
+    };
+  }
+
+  function press(el) {
+    var p = el.getAttribute("data-p"), u = el.getAttribute("data-u"), app = el.getAttribute("data-app"), inp = el.getAttribute("data-in");
+    buzz();
+    if (p) { btn(p); } else if (u) { send(u); }
+    else if (app) { send("ssap://system.launcher/launch", { id: app }); }
+    else if (inp) { send("ssap://tv/switchInput", { inputId: inp }); }
+  }
+  var rt = null, rt2 = null;
+  function stopRep() { clearTimeout(rt); clearInterval(rt2); rt = rt2 = null; }
+  function bind(el) {
+    var rep = el.getAttribute("data-rep");
+    el.addEventListener("pointerdown", function (e) {
+      e.preventDefault(); press(el);
+      if (rep) { stopRep(); rt = setTimeout(function () { rt2 = setInterval(function () { press(el); }, 120); }, 380); }
+    });
+    ["pointerup", "pointerleave", "pointercancel"].forEach(function (n) { el.addEventListener(n, stopRep); });
+  }
+  var bs = document.querySelectorAll("[data-p],[data-u],[data-app],[data-in]");
+  for (var i = 0; i < bs.length; i++) { bind(bs[i]); }
+
+  $("bMute").addEventListener("click", function () { buzz(); send("ssap://audio/getStatus", null, function (r) { var m = r.payload && (r.payload.mute === true || (r.payload.volumeStatus && r.payload.volumeStatus.muteStatus === true)); send("ssap://audio/setMute", { mute: !m }); }); });
+  $("bPow").addEventListener("click", function () { if (confirm("Turn the TV off?")) { send("ssap://system/turnOff"); } });
+  $("bRe").addEventListener("click", function () { conn(); });
+  $("bFor").addEventListener("click", function () { wantOpen = false; try { ws.close(); } catch (e) {} key = ""; LS.del("tvKey"); show(true); st("Forgotten. Set up again below."); });
+  $("go").addEventListener("click", function () { var v = $("ip").value.replace(/\s/g, ""); if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(v)) { st("Enter the TV's address like 192.168.1.78", "bad"); return; } ip = v; LS.set("tvIp", ip); conn(); });
+  $("ip").value = ip;
+  $("ip").addEventListener("input", function () { $("trust").href = "https://" + $("ip").value.replace(/\s/g, "") + ":3001/"; });
+  $("trust").href = "https://" + ip + ":3001/";
+
+  var pad = $("pad"), last = null, moved = false, startT = 0;
+  pad.addEventListener("pointerdown", function (e) { last = [e.clientX, e.clientY]; moved = false; startT = Date.now(); try { pad.setPointerCapture(e.pointerId); } catch (x) {} });
+  pad.addEventListener("pointermove", function (e) { if (!last) { return; } var dx = Math.round((e.clientX - last[0]) * 2), dy = Math.round((e.clientY - last[1]) * 2); if (dx || dy) { moved = true; last = [e.clientX, e.clientY]; openPointer(function () { try { ps.send("type:move\ndx:" + dx + "\ndy:" + dy + "\ndown:0\n\n"); } catch (x) {} }); } });
+  pad.addEventListener("pointerup", function () { if (last && !moved && Date.now() - startT < 400) { buzz(); openPointer(function () { try { ps.send("type:click\n\n"); } catch (x) {} }); } last = null; });
+
+  document.addEventListener("visibilitychange", function () { if (!document.hidden && wantOpen && key && (!ws || ws.readyState !== 1 || !ready)) { conn(); } });
+  window.addEventListener("online", function () { if (key) { conn(); } });
+  if (key) { show(false); conn(); } else { show(true); st("Set up your TV below"); }
+})();
+</script></body></html>
