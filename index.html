@@ -35,6 +35,8 @@
   @keyframes d1 { to { transform:translate(500px,300px); } }
   @keyframes d2 { to { transform:translate(-500px,-250px); } }
   body.noanim .blob { animation:none; }
+  .blob { will-change:transform; }
+  body.busy .blob { animation-play-state:paused; }
 
   #stage { position:relative; z-index:1; width:1920px; height:1080px; flex:none; transform-origin:center center; overflow:hidden; }
   #shift { position:absolute; top:0; left:0; width:1920px; height:1080px; padding:54px 110px 46px;
@@ -87,7 +89,7 @@
          padding:12px 30px; cursor:pointer; outline:none; margin-left:22px; text-decoration:none; }
   #controls .btn:first-of-type { margin-left:34px; }
 
-  .f { outline:none; border:5px solid transparent; transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+  .f { outline:none; border:5px solid transparent; transition:transform .12s ease-out, border-color .12s ease-out; }
   .tile.f { border-width:6px; }
   .f:focus { transform:scale(1.07); border-color:var(--accent); box-shadow:0 0 0 7px var(--glow), 0 22px 50px rgba(0,0,0,.35); }
   .tile.f:focus { transform:scale(1.09); }
@@ -343,8 +345,8 @@ var TILES = [
   { name:"Netflix",     appId:"netflix",             url:"https://www.netflix.com",    color:"#e50914", letter:"N" },
   { name:"YouTube",     appId:"youtube.leanback.v4", url:"https://www.youtube.com/tv", color:"#ff0000", letter:"▶" },
   { name:"Prime Video", appId:"amazon",              url:"https://www.primevideo.com", color:"#00a8e1", letter:"P" },
-  { name:"Viu",         url:"https://viu.to/",            color:"#e8a317", letter:"V" },
-  { name:"Spotify",     action:"music",                    color:"#1db954", letter:"S" }
+  { name:"Viu",         appId:"com.webos.app.browser", appParams:{ target:"https://viu.to/" }, url:"https://viu.to/",            color:"#e8a317", letter:"V" },
+  { name:"Spotify",     action:"music", appId:"spotify-beehive",                    color:"#1db954", letter:"S" }
 ];
 var THEMES = [
   { id:"midnight", name:"Midnight", c:"#3a4aa8" }, { id:"sunset", name:"Sunset", c:"#d9674f" },
@@ -459,6 +461,7 @@ function renderWx(j, stale, when) {
 }
 function loadWeather() {
   var key = wxKey();
+  try { var c0 = JSON.parse(lsGet("tvWx") || "null"); if (c0 && c0.key === key && c0.data && c0.data.current) { renderWx(c0.data, false, c0.t); } } catch (e) {}
   fetch(wxUrl()).then(function (r) { if (!r.ok) { throw new Error("bad"); } return r.json(); }).then(function (j) {
     lsSet("tvWx", JSON.stringify({ key:key, t:Date.now(), data:j }));
     renderWx(j, false, Date.now());
@@ -474,11 +477,11 @@ loadWeather(); setInterval(loadWeather, 15 * 60 * 1000);
 /* ---- tiles ---- */
 var MUSIC_INDEX = -1;
 /* Launch a real TV app when running as an installed LG app (PalmServiceBridge exists); otherwise the tile just opens the web page. */
-function launchApp(id, fail) {
+function launchApp(id, fail, params) {
   try {
     var b = new window.PalmServiceBridge();
     b.onservicecallback = function (r) { try { var o = JSON.parse(r); if (o.returnValue === false) { fail(); } } catch (e) { fail(); } };
-    b.call("luna://com.webos.applicationManager/launch", JSON.stringify({ id: id }));
+    b.call("luna://com.webos.applicationManager/launch", JSON.stringify(params ? { id: id, params: params } : { id: id }));
   } catch (e) { fail(); }
 }
 function buildTiles() {
@@ -488,14 +491,20 @@ function buildTiles() {
     var a = document.createElement("a");
     a.className = "tile f" + (w < 340 ? " sm" : ""); a.id = "tile" + i; a.setAttribute("tabindex", "0");
     a.style.width = w + "px";
-    if (t.action === "music") { a.href = "#"; MUSIC_INDEX = i; a.addEventListener("click", function (e) { e.preventDefault(); openMusic(); }); }
-    else { a.href = t.url; if (t.appId) { a.addEventListener("click", function (e) { if (window.PalmServiceBridge) { e.preventDefault(); launchApp(t.appId, function () { location.href = t.url; }); } }); } }
+    if (t.action === "music") { a.href = "#"; MUSIC_INDEX = i; a.addEventListener("click", function (e) { e.preventDefault(); if (window.PalmServiceBridge && t.appId) { toast("Opening " + t.name + "…"); launchApp(t.appId, openMusic); } else { openMusic(); } }); }
+    else { a.href = t.url; if (t.appId) { a.addEventListener("click", function (e) { if (window.PalmServiceBridge) { e.preventDefault(); toast("Opening " + t.name + "…"); launchApp(t.appId, function () { location.href = t.url; }, t.appParams); } }); } }
     a.innerHTML = '<span class="num">' + (i + 1) + '</span><div class="logo" style="background:' + t.color + '">' + t.letter + '</div><div class="tname">' + t.name + '</div>';
     a.addEventListener("mouseenter", function () { a.focus(); });
     m.appendChild(a);
   });
 }
 buildTiles();
+/* pause the background motion while someone is using the screen, so button presses feel instant */
+(function () {
+  var t = null;
+  function busy() { document.body.classList.add("busy"); clearTimeout(t); t = setTimeout(function () { document.body.classList.remove("busy"); }, 6000); }
+  document.addEventListener("keydown", busy); document.addEventListener("mousemove", busy); document.addEventListener("click", busy);
+})();
 /* pointer (Magic Remote / mouse): hovering any control highlights it, no click needed */
 document.addEventListener("mouseover", function (e) { var el = e.target; while (el && el !== document.body) { if (el.classList && el.classList.contains("f") && el.focus) { if (document.activeElement !== el) { el.focus(); } return; } el = el.parentNode; } });
 
@@ -743,7 +752,7 @@ function initRemote() {
   try {
     var id = rid(); pin = newPin(); tries = 0;
     peer = new window.Peer(id, { config: window.TVH_ICE });
-    peer.on("open", function () { remoteUrl = location.origin + location.pathname + "?remote=" + id; renderPair(); });
+    peer.on("open", function () { remoteUrl = (/^https?:$/.test(location.protocol) ? location.origin + location.pathname : "https://unorthodox15.github.io/tv-dashboard/") + "?remote=" + id; renderPair(); });
     peer.on("connection", onConn);
     peer.on("error", function (e) { setPair("Remote problem: " + ((e && e.type) || "unknown")); });
     peer.on("disconnected", function () { try { peer.reconnect(); } catch (x) {} });
