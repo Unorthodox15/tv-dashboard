@@ -213,6 +213,7 @@
     <div class="msg" id="cityMsg"></div>
     <div class="row"><label>Temperature</label><button class="btn f" id="unitsBtn" tabindex="0"></button></div>
     <div class="row"><label>Clock</label><button class="btn f" id="clockBtn" tabindex="0"></button></div>
+    <div class="row"><label>Time zone</label><button class="btn f" id="tzBtn" tabindex="0"></button></div>
     <div class="row"><label>Moving background</label><button class="btn f" id="animBtn" tabindex="0"></button></div>
     <div class="row"><label>Dim when idle</label><button class="btn f" id="idleBtn" tabindex="0"></button></div>
     <div class="row"><label>Spotify link</label><input id="spIn" class="field f" type="text" tabindex="0" placeholder="Paste a Spotify link"><button class="btn f" id="spGo" tabindex="0">Save</button></div>
@@ -339,7 +340,7 @@ window.TVH_LIBS = {
 if (window.__PHONE) { return; }
 
 /* ---------- EDIT THESE (or use Settings on the TV) ---------- */
-var DEFAULTS = { place:"Calgary", lat:51.05, lon:-114.07, units:"celsius", hour12:true, anim:true, idleMin:15, theme:"midnight",
+var DEFAULTS = { tz:"America/Regina", place:"Calgary", lat:51.05, lon:-114.07, units:"celsius", hour12:true, anim:true, idleMin:15, theme:"midnight",
                  spotify:"https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M" };
 var TILES = [
   { name:"Netflix",     appId:"netflix",             url:"https://www.netflix.com",    color:"#e50914", letter:"N" },
@@ -375,13 +376,23 @@ function fit() { var s = Math.min(innerWidth / 1920, innerHeight / 1080); $("sta
 addEventListener("resize", fit); fit();
 
 /* ---- clock + greeting ---- */
+var TZS = [ ["America/Regina", "Regina (no daylight saving)"], ["America/Edmonton", "Calgary / Edmonton"], ["America/Winnipeg", "Winnipeg"], ["America/Toronto", "Toronto"], ["America/Vancouver", "Vancouver"], ["", "Same as the TV"] ];
+/* returns a Date whose local fields (getHours etc.) show the wall-clock time in the chosen time zone */
+function zoned(d) {
+  if (!S.tz) { return d; }
+  try {
+    var parts = new Intl.DateTimeFormat("en-CA", { timeZone:S.tz, hourCycle:"h23", year:"numeric", month:"numeric", day:"numeric", hour:"numeric", minute:"numeric", second:"numeric" }).formatToParts(d), o = {};
+    for (var i = 0; i < parts.length; i++) { o[parts[i].type] = +parts[i].value; }
+    return new Date(o.year, o.month - 1, o.day, o.hour % 24, o.minute, o.second);
+  } catch (e) { return d; }
+}
 function timeStr(d) {
   var h = d.getHours(), m = pad2(d.getMinutes());
   if (S.hour12) { return { t:(h % 12 || 12) + ":" + m, ap:(h >= 12 ? "PM" : "AM") }; }
   return { t:pad2(h) + ":" + m, ap:"" };
 }
 function tick() {
-  var d = new Date(), t = timeStr(d), h = d.getHours();
+  var d = zoned(new Date()), t = timeStr(d), h = d.getHours();
   $("time").textContent = t.t; $("ampm").textContent = t.ap;
   $("date").textContent = d.toLocaleDateString(undefined, { weekday:"long", month:"long", day:"numeric" });
   $("greet").textContent = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
@@ -448,7 +459,7 @@ function renderWx(j, stale, when) {
   $("wTemp").textContent = Math.round(c.temperature_2m) + deg;
   $("wDesc").textContent = wxText(c.weather_code);
   $("wFeels").textContent = "Feels like " + Math.round(c.apparent_temperature) + deg + "  ·  H " + Math.round(d.temperature_2m_max[0]) + deg + "  L " + Math.round(d.temperature_2m_min[0]) + deg;
-  var t = timeStr(new Date(when || Date.now()));
+  var t = timeStr(zoned(new Date(when || Date.now())));
   $("wPlace").textContent = S.place + "  ·  " + (stale ? "offline, from " : "updated ") + t.t + " " + t.ap;
   var html = "";
   for (var i = 0; i < d.time.length && i < 5; i++) {
@@ -518,7 +529,7 @@ buildTiles();
 document.addEventListener("mouseover", function (e) { var el = e.target; while (el && el !== document.body) { if (el.classList && el.classList.contains("f") && el.focus) { if (document.activeElement !== el) { el.focus(); } return; } el = el.parentNode; } });
 
 /* ---- themes ---- */
-function autoTheme() { var h = new Date().getHours(); return (h >= 6 && h < 18) ? "ocean" : "midnight"; }
+function autoTheme() { var h = zoned(new Date()).getHours(); return (h >= 6 && h < 18) ? "ocean" : "midnight"; }
 function applyTheme() {
   document.body.setAttribute("data-theme", S.theme === "auto" ? autoTheme() : S.theme);
   THEMES.forEach(function (t) { var el = $("sw_" + t.id); if (el) { el.className = "sw f" + (t.id === S.theme ? " sel" : ""); } });
@@ -560,6 +571,8 @@ var IDLE_OPTS = [0, 5, 15, 30];
 function labels() {
   $("unitsBtn").textContent = S.units === "fahrenheit" ? "Fahrenheit (°F)" : "Celsius (°C)";
   $("clockBtn").textContent = S.hour12 ? "12-hour" : "24-hour";
+  var tzName = "Same as the TV"; for (var z = 0; z < TZS.length; z++) { if (TZS[z][0] === (S.tz || "")) { tzName = TZS[z][1]; } }
+  $("tzBtn").textContent = tzName;
   $("animBtn").textContent = S.anim ? "On" : "Off";
   $("idleBtn").textContent = S.idleMin ? S.idleMin + " minutes" : "Never";
   document.body.className = (S.anim ? "" : "noanim ") + (document.body.className.indexOf("idle") >= 0 ? "idle" : "");
@@ -567,6 +580,7 @@ function labels() {
 $("setBtn").addEventListener("click", function () { labels(); openOverlay("panel", "unitsBtn", "setBtn"); });
 $("doneBtn").addEventListener("click", closeOverlay);
 $("unitsBtn").addEventListener("click", function () { S.units = S.units === "fahrenheit" ? "celsius" : "fahrenheit"; save(); labels(); loadWeather(); });
+$("tzBtn").addEventListener("click", function () { var k = 0; for (var z = 0; z < TZS.length; z++) { if (TZS[z][0] === (S.tz || "")) { k = z; } } S.tz = TZS[(k + 1) % TZS.length][0]; save(); labels(); tick(); loadWeather(); });
 $("clockBtn").addEventListener("click", function () { S.hour12 = !S.hour12; save(); labels(); tick(); });
 $("animBtn").addEventListener("click", function () { S.anim = !S.anim; save(); labels(); });
 $("idleBtn").addEventListener("click", function () {
@@ -687,7 +701,7 @@ setInterval(function () {
 var SHIFTS = [[0,0],[6,4],[-5,7],[4,-6],[-7,-3]], shiftI = 0;
 setInterval(function () { shiftI = (shiftI + 1) % SHIFTS.length; $("shift").style.transform = "translate(" + SHIFTS[shiftI][0] + "px," + SHIFTS[shiftI][1] + "px)"; }, 60000);
 addEventListener("mousemove", function () { if (document.body.className.indexOf("idle") >= 0) { wake(); } else { lastActive = Date.now(); } });
-setInterval(function () { if (new Date().getHours() === 4 && Date.now() - bootT > 6 * 3600000 && !T.running) { location.reload(); } }, 60000);
+setInterval(function () { if (zoned(new Date()).getHours() === 4 && Date.now() - bootT > 6 * 3600000 && !T.running) { location.reload(); } }, 60000);
 
 /* ---- navigation: shared by the TV remote and the phone remote ---- */
 function focusables() {
