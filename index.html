@@ -5,186 +5,379 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TV Home</title>
 <style>
-  :root {
-    --bg1: #0f1226; --bg2: #1d2350;
-    --card: rgba(255,255,255,0.08);
-    --text: #f4f6ff; --muted: #a9b0d6;
-    --accent: #7c8cff;
+  :root, [data-theme="midnight"] {
+    --bg1:#0b0e22; --bg2:#1b2250; --blob1:rgba(110,125,255,.55); --blob2:rgba(190,90,255,.35);
+    --card:rgba(255,255,255,.08); --card2:rgba(255,255,255,.06);
+    --text:#f4f6ff; --muted:#a9b0d6; --accent:#8c9bff; --glow:rgba(140,155,255,.38); --panel:#151a3d;
   }
-  [data-theme="sunset"] { --bg1:#2a0f1f; --bg2:#7a2f4a; --card:rgba(255,255,255,0.10); --text:#fff4ee; --muted:#f0b8b0; --accent:#ffb36b; }
-  [data-theme="forest"] { --bg1:#0c1f1a; --bg2:#1f5a46; --card:rgba(255,255,255,0.09); --text:#eefaf4; --muted:#a6d4c1; --accent:#6be3a4; }
-  [data-theme="ocean"]  { --bg1:#07182b; --bg2:#0f5c7a; --card:rgba(255,255,255,0.09); --text:#eefbff; --muted:#a3d3e6; --accent:#5fd3ff; }
-  [data-theme="light"]  { --bg1:#eef1fb; --bg2:#cfd8f5; --card:rgba(255,255,255,0.75); --text:#1a2040; --muted:#55608f; --accent:#3d4fe0; }
+  [data-theme="sunset"] { --bg1:#240b1c; --bg2:#6b2742; --blob1:rgba(255,150,90,.5); --blob2:rgba(255,80,140,.4);
+    --card:rgba(255,255,255,.10); --card2:rgba(255,255,255,.07); --text:#fff4ee; --muted:#f0b8b0; --accent:#ffb36b; --glow:rgba(255,179,107,.38); --panel:#3a1428; }
+  [data-theme="forest"] { --bg1:#0a1c16; --bg2:#1c5a45; --blob1:rgba(90,230,160,.4); --blob2:rgba(40,160,120,.4);
+    --card:rgba(255,255,255,.09); --card2:rgba(255,255,255,.06); --text:#eefaf4; --muted:#a6d4c1; --accent:#6be3a4; --glow:rgba(107,227,164,.38); --panel:#10302a; }
+  [data-theme="ocean"] { --bg1:#06162a; --bg2:#0e5c7c; --blob1:rgba(80,200,255,.45); --blob2:rgba(60,120,255,.4);
+    --card:rgba(255,255,255,.09); --card2:rgba(255,255,255,.06); --text:#eefbff; --muted:#a3d3e6; --accent:#5fd3ff; --glow:rgba(95,211,255,.38); --panel:#0a2c44; }
+  [data-theme="light"] { --bg1:#eef1fb; --bg2:#cfd8f5; --blob1:rgba(120,140,255,.35); --blob2:rgba(255,160,200,.35);
+    --card:rgba(255,255,255,.78); --card2:rgba(255,255,255,.62); --text:#1a2040; --muted:#55608f; --accent:#3d4fe0; --glow:rgba(61,79,224,.3); --panel:#ffffff; }
 
-  * { box-sizing: border-box; }
+  * { box-sizing:border-box; }
   html, body { margin:0; height:100%; overflow:hidden; }
   body {
-    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: var(--text);
-    background: linear-gradient(135deg, var(--bg1), var(--bg2));
+    font-family:"Segoe UI", Roboto, Helvetica, Arial, sans-serif; color:var(--text);
+    background:linear-gradient(135deg, var(--bg1), var(--bg2));
     display:flex; align-items:center; justify-content:center;
   }
-  /* Fixed 1920x1080 canvas, scaled to fit any screen */
-  #stage { width:1920px; height:1080px; flex:none; transform-origin:center center; padding:80px 110px; display:flex; flex-direction:column; }
+  .hidden { display:none !important; }
+
+  /* slow drifting colour behind everything (cheap: no blur filters) */
+  #aurora { position:fixed; top:0; left:0; right:0; bottom:0; overflow:hidden; pointer-events:none; z-index:0; }
+  .blob { position:absolute; width:1200px; height:1200px; border-radius:50%; }
+  .b1 { background:radial-gradient(circle, var(--blob1) 0%, transparent 65%); top:-400px; left:-300px; animation:d1 50s ease-in-out infinite alternate; }
+  .b2 { background:radial-gradient(circle, var(--blob2) 0%, transparent 65%); bottom:-500px; right:-300px; animation:d2 65s ease-in-out infinite alternate; }
+  @keyframes d1 { to { transform:translate(500px,300px); } }
+  @keyframes d2 { to { transform:translate(-500px,-250px); } }
+  body.noanim .blob { animation:none; }
+
+  /* fixed 1920x1080 canvas scaled to fit any screen */
+  #stage { position:relative; z-index:1; width:1920px; height:1080px; flex:none; transform-origin:center center; overflow:hidden; }
+  #shift { position:absolute; top:0; left:0; width:1920px; height:1080px; padding:54px 110px 46px;
+           display:flex; flex-direction:column; transition:opacity 2s ease, transform 3s ease; }
+  body.idle #shift { opacity:.16; }
 
   header { display:flex; justify-content:space-between; align-items:flex-start; }
-  #time { font-size:190px; font-weight:200; line-height:1; letter-spacing:-4px; }
-  #ampm { font-size:56px; font-weight:300; color:var(--muted); margin-left:14px; letter-spacing:0; }
-  #date { font-size:44px; color:var(--muted); margin-top:10px; }
+  #greet { font-size:40px; color:var(--muted); margin-bottom:4px; }
+  #time { font-size:176px; font-weight:200; line-height:1; letter-spacing:-4px; }
+  #ampm { font-size:52px; font-weight:300; color:var(--muted); margin-left:14px; letter-spacing:0; }
+  #date { font-size:40px; color:var(--muted); margin-top:6px; }
 
-  #weather { text-align:right; background:var(--card); border-radius:36px; padding:34px 48px; min-width:480px; }
-  #wIcon { font-size:96px; line-height:1; }
-  #wTemp { font-size:96px; font-weight:300; line-height:1; }
-  #wDesc { font-size:36px; color:var(--muted); margin-top:8px; }
-  #wRow  { display:flex; align-items:center; justify-content:flex-end; gap:28px; }
-  #wPlace { font-size:28px; color:var(--muted); margin-top:6px; }
+  #weather { text-align:right; background:var(--card); border-radius:36px; padding:26px 44px; min-width:540px; }
+  #wRow { display:flex; justify-content:flex-end; align-items:center; }
+  #wIcon { font-size:88px; line-height:1; margin-right:26px; }
+  #wTemp { font-size:100px; font-weight:300; line-height:1; }
+  #wDesc { font-size:34px; margin-top:6px; }
+  #wFeels { font-size:28px; color:var(--muted); margin-top:4px; }
+  #wPlace { font-size:24px; color:var(--muted); margin-top:4px; }
 
-  main { flex:1; display:flex; align-items:center; justify-content:center; gap:60px; }
-  .tile {
-    width:480px; height:360px; border-radius:44px;
-    background:var(--card); color:var(--text); text-decoration:none;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px;
-    font-size:52px; font-weight:500;
-    border:6px solid transparent;
-    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
-    outline:none;
-  }
-  .tile .logo { width:150px; height:150px; border-radius:36px; display:flex; align-items:center; justify-content:center; font-size:84px; font-weight:700; color:#fff; }
-  .netflix .logo { background:#e50914; }
-  .youtube .logo { background:#ff0000; }
-  .prime   .logo { background:#00a8e1; }
-  .tile:focus, .tile:hover, #themeBtn:focus {
-    transform: scale(1.08);
-    border-color: var(--accent);
-    box-shadow: 0 24px 60px rgba(0,0,0,0.35), 0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent);
-  }
+  #forecast { display:flex; justify-content:center; margin-top:26px; min-height:130px; }
+  .day { background:var(--card2); border-radius:28px; padding:14px 0; margin:0 12px; width:190px; text-align:center; }
+  .dName { font-size:26px; color:var(--muted); }
+  .dIcon { font-size:46px; line-height:1.25; }
+  .dTemps { font-size:28px; }
+  .dTemps span { color:var(--muted); }
 
-  footer { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:30px; }
-  #themeBtn {
-    font:inherit; font-size:32px; color:var(--text); background:var(--card);
-    border:6px solid transparent; border-radius:30px; padding:18px 42px; cursor:pointer; outline:none;
-    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
-  }
+  main { flex:1; display:flex; align-items:center; justify-content:center; }
+  .tile { position:relative; width:440px; height:320px; margin:0 30px; border-radius:44px; background:var(--card);
+          color:var(--text); text-decoration:none; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .tile .num { position:absolute; top:22px; left:30px; font-size:26px; color:var(--muted); }
+  .tile .logo { width:140px; height:140px; border-radius:34px; display:flex; align-items:center; justify-content:center;
+                font-size:80px; font-weight:700; color:#fff; margin-bottom:22px; }
+  .tile .tname { font-size:50px; font-weight:500; }
+
+  footer { height:84px; display:flex; justify-content:space-between; align-items:center; }
+  #hint { font-size:27px; color:var(--muted); }
+  #controls { display:flex; align-items:center; }
+  .sw { width:56px; height:56px; padding:0; border-radius:50%; margin-left:18px; cursor:pointer; border:5px solid transparent; outline:none; }
+  .sw.sel { border-color:var(--text); }
+  .btn { font:inherit; font-size:30px; color:var(--text); background:var(--card); border:5px solid transparent; border-radius:28px;
+         padding:14px 36px; cursor:pointer; outline:none; margin-left:34px; }
+
+  /* focus: every control gets the same clear highlight */
+  .f { outline:none; border:5px solid transparent; transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+  .tile.f { border-width:6px; }
+  .f:focus { transform:scale(1.07); border-color:var(--accent); box-shadow:0 0 0 7px var(--glow), 0 22px 50px rgba(0,0,0,.35); }
+  .tile.f:focus { transform:scale(1.09); }
+  .sw.f:focus { transform:scale(1.25); }
+
+  /* settings */
+  #panel { position:absolute; top:0; left:0; width:1920px; height:1080px; background:rgba(0,0,0,.62);
+           display:flex; align-items:center; justify-content:center; z-index:5; }
+  #panelBox { width:1060px; background:var(--panel); border-radius:44px; padding:46px 60px; }
+  #panelBox h2 { margin:0 0 26px; font-size:52px; font-weight:400; }
+  .row { display:flex; align-items:center; margin:18px 0; }
+  .row label { width:340px; font-size:32px; color:var(--muted); }
+  .row .btn { margin-left:0; }
+  #cityIn { font:inherit; font-size:32px; color:var(--text); background:var(--card); border:5px solid transparent; border-radius:24px;
+            padding:12px 24px; width:430px; margin-right:20px; }
+  #cityMsg { font-size:26px; color:var(--muted); min-height:34px; margin:-6px 0 6px 340px; }
+
+  #toast { position:absolute; left:0; right:0; bottom:150px; text-align:center; pointer-events:none; opacity:0; transition:opacity .4s ease; z-index:6; }
+  #toast span { display:inline-block; font-size:32px; background:var(--panel); color:var(--text); padding:14px 34px; border-radius:30px; }
+  #toast.show { opacity:1; }
 </style>
 </head>
 <body data-theme="midnight">
+<div id="aurora"><div class="blob b1"></div><div class="blob b2"></div></div>
+
 <div id="stage">
+ <div id="shift">
   <header>
     <div>
+      <div id="greet"></div>
       <div><span id="time">--:--</span><span id="ampm"></span></div>
       <div id="date"></div>
     </div>
     <div id="weather">
-      <div id="wRow"><div id="wIcon">…</div><div id="wTemp">--°</div></div>
+      <div id="wRow"><div id="wIcon">&hellip;</div><div id="wTemp">--&deg;</div></div>
       <div id="wDesc">Loading weather</div>
+      <div id="wFeels"></div>
       <div id="wPlace"></div>
     </div>
   </header>
 
-  <main>
-    <a class="tile netflix" href="https://www.netflix.com" tabindex="0"><div class="logo">N</div>Netflix</a>
-    <a class="tile youtube" href="https://www.youtube.com/tv" tabindex="0"><div class="logo">▶</div>YouTube</a>
-    <a class="tile prime"   href="https://www.primevideo.com" tabindex="0"><div class="logo">P</div>Prime Video</a>
-  </main>
+  <section id="forecast"></section>
+  <main id="tiles"></main>
 
   <footer>
-    <span>Use the arrow keys and OK to choose</span>
-    <button id="themeBtn" tabindex="0">Theme: <span id="themeName">Midnight</span></button>
+    <div id="hint">OK to open &middot; press 1, 2 or 3 to launch &middot; arrows to move</div>
+    <div id="controls">
+      <div id="swatches" style="display:flex;align-items:center"></div>
+      <button class="btn f" id="setBtn" tabindex="0">Settings</button>
+    </div>
   </footer>
+ </div>
+
+ <div id="panel" class="hidden">
+  <div id="panelBox">
+    <h2>Settings</h2>
+    <div class="row"><label>City</label><input id="cityIn" class="f" type="text" tabindex="0" placeholder="Type a city"><button class="btn f" id="cityGo" tabindex="0">Search</button></div>
+    <div id="cityMsg"></div>
+    <div class="row"><label>Temperature</label><button class="btn f" id="unitsBtn" tabindex="0"></button></div>
+    <div class="row"><label>Clock</label><button class="btn f" id="clockBtn" tabindex="0"></button></div>
+    <div class="row"><label>Moving background</label><button class="btn f" id="animBtn" tabindex="0"></button></div>
+    <div class="row"><label>Dim when idle</label><button class="btn f" id="idleBtn" tabindex="0"></button></div>
+    <div class="row"><button class="btn f" id="doneBtn" tabindex="0">Done</button></div>
+  </div>
+ </div>
+
+ <div id="toast"><span id="toastMsg"></span></div>
 </div>
 
 <script>
-/* ---------- EDIT THESE ---------- */
-const CONFIG = {
-  place: "Calgary",
-  lat: 51.05, lon: -114.07,
-  units: "celsius",          // "celsius" or "fahrenheit"
-  hour12: true               // false for 24-hour clock
-};
-const THEMES = ["midnight","sunset","forest","ocean","light"];
-/* -------------------------------- */
+/* ---------- EDIT THESE (or use the Settings button on the TV) ---------- */
+var DEFAULTS = { place:"Calgary", lat:51.05, lon:-114.07, units:"celsius", hour12:true, anim:true, idleMin:15, theme:"midnight" };
+var TILES = [
+  { name:"Netflix",     url:"https://www.netflix.com",    color:"#e50914", letter:"N" },
+  { name:"YouTube",     url:"https://www.youtube.com/tv", color:"#ff0000", letter:"▶" },
+  { name:"Prime Video", url:"https://www.primevideo.com", color:"#00a8e1", letter:"P" },
+  { name:"Viu",         url:"https://viu.to/",            color:"#e8a317", letter:"V" }
+];
+var THEMES = [
+  { id:"midnight", name:"Midnight", c:"#3a4aa8" }, { id:"sunset", name:"Sunset", c:"#d9674f" },
+  { id:"forest",   name:"Forest",   c:"#2f9a74" }, { id:"ocean",  name:"Ocean",  c:"#2a9fcb" },
+  { id:"light",    name:"Light",    c:"#e6eafc" }, { id:"auto",   name:"Auto (day/night)", c:"linear-gradient(135deg,#0f1226 50%,#5fd3ff 50%)" }
+];
+/* ----------------------------------------------------------------------- */
 
-// Scale the 1920x1080 stage to fit the screen
+function $(id) { return document.getElementById(id); }
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+var S = (function () {
+  var s = {}, raw = lsGet("tvSettings");
+  try { s = JSON.parse(raw || "{}"); } catch (e) {}
+  var out = {};
+  for (var k in DEFAULTS) { out[k] = (s && s[k] !== undefined) ? s[k] : DEFAULTS[k]; }
+  return out;
+})();
+function save() { lsSet("tvSettings", JSON.stringify(S)); }
+
+var panelOpen = false, lastActive = Date.now(), bootT = Date.now();
+
+/* scale the 1920x1080 stage to the screen */
 function fit() {
-  const s = Math.min(innerWidth/1920, innerHeight/1080);
-  document.getElementById("stage").style.transform = "scale(" + s + ")";
+  var s = Math.min(innerWidth / 1920, innerHeight / 1080);
+  $("stage").style.transform = "scale(" + s + ")";
 }
 addEventListener("resize", fit); fit();
 
-// Clock
-function tick() {
-  const d = new Date();
-  let h = d.getHours(), m = String(d.getMinutes()).padStart(2,"0");
-  let ap = "";
-  if (CONFIG.hour12) { ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; }
-  else h = String(h).padStart(2,"0");
-  document.getElementById("time").textContent = h + ":" + m;
-  document.getElementById("ampm").textContent = ap;
-  document.getElementById("date").textContent =
-    d.toLocaleDateString(undefined, { weekday:"long", month:"long", day:"numeric" });
+/* clock + greeting */
+function timeStr(d) {
+  var h = d.getHours(), m = ("0" + d.getMinutes()).slice(-2);
+  if (S.hour12) { return { t:(h % 12 || 12) + ":" + m, ap:(h >= 12 ? "PM" : "AM") }; }
+  return { t:("0" + h).slice(-2) + ":" + m, ap:"" };
 }
-tick(); setInterval(tick, 10000);
+function tick() {
+  var d = new Date(), t = timeStr(d), h = d.getHours();
+  $("time").textContent = t.t; $("ampm").textContent = t.ap;
+  $("date").textContent = d.toLocaleDateString(undefined, { weekday:"long", month:"long", day:"numeric" });
+  $("greet").textContent = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  if (S.theme === "auto") { applyTheme(); }
+}
+tick(); setInterval(tick, 5000);
 
-// Weather (Open-Meteo, no API key needed)
-const WX = {0:["☀️","Clear"],1:["🌤️","Mostly clear"],2:["⛅","Partly cloudy"],3:["☁️","Overcast"],
+/* weather (Open-Meteo, no key) with offline cache */
+var WX = {0:["☀️","Clear"],1:["🌤️","Mostly clear"],2:["⛅","Partly cloudy"],3:["☁️","Overcast"],
   45:["🌫️","Fog"],48:["🌫️","Fog"],51:["🌦️","Light drizzle"],53:["🌦️","Drizzle"],55:["🌦️","Heavy drizzle"],
   61:["🌧️","Light rain"],63:["🌧️","Rain"],65:["🌧️","Heavy rain"],71:["🌨️","Light snow"],73:["🌨️","Snow"],
   75:["❄️","Heavy snow"],77:["🌨️","Snow grains"],80:["🌦️","Showers"],81:["🌧️","Showers"],82:["⛈️","Heavy showers"],
   85:["🌨️","Snow showers"],86:["🌨️","Snow showers"],95:["⛈️","Thunderstorm"],96:["⛈️","Thunderstorm"],99:["⛈️","Thunderstorm"]};
+function wx(c) { return WX[c] || ["🌡️", "Weather"]; }
+function wxKey() { return S.lat + "," + S.lon + "," + S.units; }
+function wxUrl() {
+  return "https://api.open-meteo.com/v1/forecast?latitude=" + S.lat + "&longitude=" + S.lon +
+    "&current=temperature_2m,apparent_temperature,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min" +
+    "&timezone=auto&forecast_days=5&temperature_unit=" + (S.units === "fahrenheit" ? "fahrenheit" : "celsius");
+}
+function renderWx(j, stale, when) {
+  var c = j.current, d = j.daily, w = wx(c.weather_code), deg = "°";
+  $("wIcon").textContent = w[0];
+  $("wTemp").textContent = Math.round(c.temperature_2m) + deg;
+  $("wDesc").textContent = w[1];
+  $("wFeels").textContent = "Feels like " + Math.round(c.apparent_temperature) + deg + "  ·  H " + Math.round(d.temperature_2m_max[0]) + deg + "  L " + Math.round(d.temperature_2m_min[0]) + deg;
+  var t = timeStr(new Date(when || Date.now()));
+  $("wPlace").textContent = S.place + "  ·  " + (stale ? "offline, from " : "updated ") + t.t + " " + t.ap;
+  var html = "";
+  for (var i = 0; i < d.time.length && i < 5; i++) {
+    var p = d.time[i].split("-"), dt = new Date(+p[0], +p[1] - 1, +p[2]);
+    var name = i === 0 ? "Today" : dt.toLocaleDateString(undefined, { weekday:"short" });
+    html += '<div class="day"><div class="dName">' + name + '</div><div class="dIcon">' + wx(d.weather_code[i])[0] +
+      '</div><div class="dTemps">' + Math.round(d.temperature_2m_max[i]) + deg + ' <span>' + Math.round(d.temperature_2m_min[i]) + deg + '</span></div></div>';
+  }
+  $("forecast").innerHTML = html;
+}
 function loadWeather() {
-  const url = "https://api.open-meteo.com/v1/forecast?latitude=" + CONFIG.lat + "&longitude=" + CONFIG.lon +
-    "&current=temperature_2m,weather_code&temperature_unit=" + CONFIG.units;
-  fetch(url).then(r => r.json()).then(j => {
-    const t = Math.round(j.current.temperature_2m);
-    const w = WX[j.current.weather_code] || ["🌡️","Weather"];
-    document.getElementById("wIcon").textContent = w[0];
-    document.getElementById("wTemp").textContent = t + "°";
-    document.getElementById("wDesc").textContent = w[1];
-    document.getElementById("wPlace").textContent = CONFIG.place;
-  }).catch(() => {
-    document.getElementById("wDesc").textContent = "Weather unavailable";
-    document.getElementById("wPlace").textContent = CONFIG.place;
+  var key = wxKey();
+  fetch(wxUrl()).then(function (r) { if (!r.ok) { throw new Error("bad"); } return r.json(); }).then(function (j) {
+    lsSet("tvWx", JSON.stringify({ key:key, t:Date.now(), data:j }));
+    renderWx(j, false, Date.now());
+  }).catch(function () {
+    var c = null;
+    try { c = JSON.parse(lsGet("tvWx") || "null"); } catch (e) {}
+    if (c && c.key === key) { renderWx(c.data, true, c.t); }
+    else { $("wDesc").textContent = "Weather unavailable"; $("wFeels").textContent = ""; $("wPlace").textContent = S.place; $("forecast").innerHTML = ""; }
   });
 }
 loadWeather(); setInterval(loadWeather, 15 * 60 * 1000);
 
-// Themes
-function setTheme(name) {
-  document.body.setAttribute("data-theme", name);
-  document.getElementById("themeName").textContent = name.charAt(0).toUpperCase() + name.slice(1);
-  try { localStorage.setItem("tvTheme", name); } catch (e) {}
+/* tiles */
+function buildTiles() {
+  var m = $("tiles"), w = Math.min(440, Math.floor(1700 / TILES.length) - 44);
+  $("hint").textContent = "OK to open · press 1" + (TILES.length > 1 ? "–" + TILES.length : "") + " to launch · arrows to move";
+  TILES.forEach(function (t, i) {
+    var a = document.createElement("a");
+    a.className = "tile f"; a.id = "tile" + i; a.href = t.url; a.setAttribute("tabindex", "0");
+    a.style.width = w + "px"; a.style.margin = "0 22px";
+    a.innerHTML = '<span class="num">' + (i + 1) + '</span><div class="logo" style="background:' + t.color + '">' + t.letter + '</div><div class="tname">' + t.name + '</div>';
+    a.addEventListener("mouseenter", function () { a.focus(); });
+    m.appendChild(a);
+  });
 }
-function nextTheme() {
-  const cur = document.body.getAttribute("data-theme");
-  setTheme(THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length]);
-}
-let saved = null; try { saved = localStorage.getItem("tvTheme"); } catch (e) {}
-setTheme(THEMES.indexOf(saved) >= 0 ? saved : "midnight");
-document.getElementById("themeBtn").addEventListener("click", nextTheme);
+buildTiles();
 
-// Remote-control navigation: arrow keys move focus to the nearest item in that direction
-const items = () => Array.prototype.slice.call(document.querySelectorAll("[tabindex='0']"));
-function center(el) { const r = el.getBoundingClientRect(); return { x:r.left + r.width/2, y:r.top + r.height/2 }; }
+/* themes */
+function autoTheme() { var h = new Date().getHours(); return (h >= 6 && h < 18) ? "ocean" : "midnight"; }
+function applyTheme() {
+  document.body.setAttribute("data-theme", S.theme === "auto" ? autoTheme() : S.theme);
+  THEMES.forEach(function (t) { var el = $("sw_" + t.id); if (el) { el.className = "sw f" + (t.id === S.theme ? " sel" : ""); } });
+}
+function buildSwatches() {
+  var box = $("swatches");
+  THEMES.forEach(function (t) {
+    var b = document.createElement("button");
+    b.id = "sw_" + t.id; b.className = "sw f"; b.setAttribute("tabindex", "0"); b.setAttribute("aria-label", t.name);
+    b.style.background = t.c;
+    b.addEventListener("click", function () { S.theme = t.id; save(); applyTheme(); toast("Theme: " + t.name); });
+    box.appendChild(b);
+  });
+}
+buildSwatches(); applyTheme();
+
+/* toast */
+var toastT = null;
+function toast(msg) {
+  $("toastMsg").textContent = msg; $("toast").className = "show";
+  clearTimeout(toastT); toastT = setTimeout(function () { $("toast").className = ""; }, 1800);
+}
+
+/* settings panel */
+var IDLE_OPTS = [0, 5, 15, 30];
+function labels() {
+  $("unitsBtn").textContent = S.units === "fahrenheit" ? "Fahrenheit (°F)" : "Celsius (°C)";
+  $("clockBtn").textContent = S.hour12 ? "12-hour" : "24-hour";
+  $("animBtn").textContent = S.anim ? "On" : "Off";
+  $("idleBtn").textContent = S.idleMin ? S.idleMin + " minutes" : "Never";
+  document.body.className = (S.anim ? "" : "noanim ") + (document.body.className.indexOf("idle") >= 0 ? "idle" : "");
+}
+function openPanel() { panelOpen = true; $("panel").className = ""; labels(); $("unitsBtn").focus(); }
+function closePanel() { panelOpen = false; $("panel").className = "hidden"; $("setBtn").focus(); }
+$("setBtn").addEventListener("click", openPanel);
+$("doneBtn").addEventListener("click", closePanel);
+$("unitsBtn").addEventListener("click", function () { S.units = S.units === "fahrenheit" ? "celsius" : "fahrenheit"; save(); labels(); loadWeather(); });
+$("clockBtn").addEventListener("click", function () { S.hour12 = !S.hour12; save(); labels(); tick(); });
+$("animBtn").addEventListener("click", function () { S.anim = !S.anim; save(); labels(); });
+$("idleBtn").addEventListener("click", function () {
+  var i = IDLE_OPTS.indexOf(S.idleMin); S.idleMin = IDLE_OPTS[(i + 1) % IDLE_OPTS.length]; save(); labels();
+});
+function findCity() {
+  var q = $("cityIn").value.replace(/^\s+|\s+$/g, ""), msg = $("cityMsg");
+  if (!q) { return; }
+  msg.textContent = "Searching…";
+  fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=" + encodeURIComponent(q))
+    .then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.results || !j.results.length) { msg.textContent = "No match for “" + q + "”"; return; }
+      var r = j.results[0];
+      S.place = r.name + (r.admin1 ? ", " + r.admin1 : ""); S.lat = r.latitude; S.lon = r.longitude; save();
+      msg.textContent = "Weather set to " + S.place; loadWeather();
+    }).catch(function () { msg.textContent = "Could not search (check internet)"; });
+}
+$("cityGo").addEventListener("click", findCity);
+$("cityIn").addEventListener("keydown", function (e) { if (e.keyCode === 13) { findCity(); } });
+
+/* idle: dim + slowly shift pixels (protects OLED/LCD from burn-in) */
+function wake() { lastActive = Date.now(); document.body.className = document.body.className.replace(/\s*idle/, ""); }
+setInterval(function () {
+  if (S.idleMin > 0 && Date.now() - lastActive > S.idleMin * 60000 && document.body.className.indexOf("idle") < 0) {
+    document.body.className += " idle";
+  }
+}, 5000);
+var SHIFTS = [[0,0],[6,4],[-5,7],[4,-6],[-7,-3]], shiftI = 0;
+setInterval(function () { shiftI = (shiftI + 1) % SHIFTS.length; $("shift").style.transform = "translate(" + SHIFTS[shiftI][0] + "px," + SHIFTS[shiftI][1] + "px)"; }, 60000);
+addEventListener("mousemove", function () { if (document.body.className.indexOf("idle") >= 0) { wake(); } else { lastActive = Date.now(); } });
+
+/* reload once a day around 4am so a TV browser that runs for weeks stays fresh */
+setInterval(function () { if (new Date().getHours() === 4 && Date.now() - bootT > 6 * 3600000) { location.reload(); } }, 60000);
+
+/* remote control: arrows move to the nearest control, OK opens, Back closes settings */
+function focusables() {
+  var root = panelOpen ? $("panel") : $("shift"), list = root.querySelectorAll('[tabindex="0"]'), out = [];
+  for (var i = 0; i < list.length; i++) { if (list[i].offsetParent !== null) { out.push(list[i]); } }
+  return out;
+}
+function center(el) { var r = el.getBoundingClientRect(); return { x:r.left + r.width / 2, y:r.top + r.height / 2 }; }
+var DIRS = { 37:[-1, 0], 38:[0, -1], 39:[1, 0], 40:[0, 1] };
 addEventListener("keydown", function (e) {
-  const dirs = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
-  const d = dirs[e.key];
-  if (!d) return;
+  var k = e.keyCode, a = document.activeElement, inInput = a && a.tagName === "INPUT";
+  if (document.body.className.indexOf("idle") >= 0) { wake(); e.preventDefault(); return; }
+  lastActive = Date.now();
+  if (k === 27 || k === 461 || k === 10009 || (k === 8 && !inInput)) { if (panelOpen) { closePanel(); e.preventDefault(); } return; }
+  if (!panelOpen && !inInput && ((k >= 49 && k <= 57) || (k >= 97 && k <= 105))) {
+    var n = k >= 97 ? k - 97 : k - 49, t = $("tile" + n);
+    if (t) { t.click(); }
+    return;
+  }
+  var d = DIRS[k];
+  if (!d) { return; }
+  if (inInput && (k === 37 || k === 39)) { return; }
   e.preventDefault();
-  const list = items(), cur = document.activeElement;
-  if (list.indexOf(cur) < 0) { list[0].focus(); return; }
-  const c = center(cur); let best = null, bestScore = Infinity;
+  var list = focusables();
+  if (list.indexOf(a) < 0) { if (list.length) { list[0].focus(); } return; }
+  var c = center(a), best = null, bestScore = 1e12;
   list.forEach(function (el) {
-    if (el === cur) return;
-    const p = center(el), dx = p.x - c.x, dy = p.y - c.y;
-    const along = dx*d[0] + dy*d[1];
-    if (along <= 0) return;
-    const across = Math.abs(dx*d[1]) + Math.abs(dy*d[0]);
-    const score = along + across * 2;
+    if (el === a) { return; }
+    var p = center(el), dx = p.x - c.x, dy = p.y - c.y, along = dx * d[0] + dy * d[1];
+    if (along <= 0) { return; }
+    var across = Math.abs(dx * d[1]) + Math.abs(dy * d[0]), score = along + across * 2;
     if (score < bestScore) { bestScore = score; best = el; }
   });
-  if (best) best.focus();
+  if (best) { best.focus(); }
 });
-items()[0].focus();
+
+/* remember which control was selected, so coming back from an app lands in the same place */
+document.addEventListener("focusin", function (e) {
+  if (!panelOpen && e.target && e.target.id && $("shift").contains(e.target)) { lsSet("tvFocus", e.target.id); }
+});
+var first = $(lsGet("tvFocus") || "tile0") || $("tile0");
+first.focus();
+labels();
 </script>
 </body>
 </html>
