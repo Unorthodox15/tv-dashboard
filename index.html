@@ -129,9 +129,9 @@
   #toast.show { opacity:1; }
 
   /* small QR code: scan with a phone to open the phone remote */
-  #qrBox { display:flex; align-items:center; margin-right:30px; }
+  #qrBox { display:flex; align-items:center; }
   #qrBox.hidden { display:none; }
-  #qrLab { font-size:21px; color:var(--muted); text-align:right; margin-right:16px; line-height:1.25; }
+  #qrLab { font-size:21px; color:var(--muted); text-align:left; margin-left:16px; line-height:1.25; }
   #qrImg { width:116px; height:116px; background:#fff; border-radius:12px; padding:6px; box-sizing:border-box; }
   #qrImg svg { width:104px; height:104px; display:block; }
 </style>
@@ -161,9 +161,8 @@
   <main id="tiles"></main>
 
   <footer>
-    <div id="hint"></div>
+    <div id="qrBox" class="hidden"><div id="qrImg"></div><div id="qrLab">Scan for<br>phone remote</div></div>
     <div id="controls">
-      <div id="qrBox" class="hidden"><div id="qrLab">Scan for<br>phone remote</div><div id="qrImg"></div></div>
       <div id="swatches" style="display:flex;align-items:center"></div>
       <button class="btn f" id="setBtn" tabindex="0">Settings</button>
     </div>
@@ -415,7 +414,6 @@ function launchApp(id, fail, params) {
 }
 function buildTiles() {
   var m = $("tiles"), w = Math.min(440, Math.floor(1700 / TILES.length) - 44);
-  $("hint").textContent = "OK to open · press 1–" + TILES.length + " to launch · arrows to move";
   TILES.forEach(function (t, i) {
     var a = document.createElement("a");
     a.className = "tile f" + (w < 340 ? " sm" : ""); a.id = "tile" + i; a.setAttribute("tabindex", "0");
