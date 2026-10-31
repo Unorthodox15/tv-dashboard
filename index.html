@@ -58,9 +58,20 @@
   #wFeels { font-size:28px; color:var(--muted); margin-top:4px; }
   #wPlace { font-size:24px; color:var(--muted); margin-top:4px; }
 
-  #pill { position:absolute; top:70px; left:0; right:0; text-align:center; pointer-events:none; }
-  #pill span { display:inline-block; font-size:44px; background:var(--card); padding:10px 34px; border-radius:36px; }
 
+  #cd { text-align:center; background:var(--card); border-radius:36px; padding:16px 44px; margin:40px 20px 0; min-width:300px; }
+  #cdLab { font-size:24px; color:var(--muted); letter-spacing:5px; }
+  #cdNum { font-size:84px; font-weight:300; line-height:1.05; }
+  #cdSub { font-size:23px; color:var(--muted); }
+  #hourly { display:flex; justify-content:center; margin-top:22px; min-height:156px; }
+  .hr { background:var(--card2); border-radius:24px; padding:12px 0; margin:0 6px; width:122px; text-align:center; }
+  .hName { font-size:24px; color:var(--muted); white-space:nowrap; }
+  .hIcon { height:48px; margin:4px 0; }
+  .hIcon svg { width:48px; height:48px; }
+  .hTemp { font-size:30px; }
+  .hPop { font-size:20px; color:var(--muted); height:24px; }
+  .fadein { animation:fcIn .8s ease; }
+  @keyframes fcIn { from { opacity:0; } to { opacity:1; } }
   #forecast { display:flex; justify-content:center; margin-top:22px; min-height:156px; }
   .day { background:var(--card2); border-radius:28px; padding:12px 0; margin:0 12px; width:190px; text-align:center; }
   .dName { font-size:26px; color:var(--muted); }
@@ -109,7 +120,6 @@
            padding:10px 22px; width:430px; margin-right:16px; }
   .msg { font-size:24px; color:var(--muted); min-height:30px; margin:-4px 0 4px 340px; }
 
-  #tBig { font-size:190px; font-weight:200; text-align:center; line-height:1.1; letter-spacing:-3px; margin:6px 0 14px; }
   #pairBody { display:flex; align-items:center; margin:8px 0; }
   #pairQr { width:300px; height:300px; margin-right:50px; flex:none; background:var(--card); border-radius:18px; }
   #pairQr svg { width:300px; height:300px; display:block; background:#fff; border-radius:18px; }
@@ -118,11 +128,6 @@
   #pairStatus { font-size:30px; margin-top:6px; }
   #pairUrl { font-size:20px; color:var(--muted); margin-top:14px; word-break:break-all; max-width:600px; }
 
-  #alarm { position:absolute; top:0; left:0; width:1920px; height:1080px; z-index:9; display:flex; flex-direction:column;
-           align-items:center; justify-content:center; background:rgba(0,0,0,.85); animation:flash 1s ease-in-out infinite alternate; }
-  #alarm .big { font-size:200px; font-weight:300; }
-  #alarm .small { font-size:44px; color:var(--muted); margin-top:10px; }
-  @keyframes flash { from { background:rgba(0,0,0,.85); } to { background:rgba(120,30,30,.85); } }
 
   #toast { position:absolute; left:0; right:0; bottom:150px; text-align:center; pointer-events:none; opacity:0; transition:opacity .4s ease; z-index:10; }
   #toast span { display:inline-block; font-size:32px; background:var(--panel); color:var(--text); padding:14px 34px; border-radius:30px; }
@@ -165,12 +170,7 @@
       <button class="rb" data-k="back">Back</button><button class="rb" data-k="down">&#9660;</button><div></div>
     </div>
     <div class="rlab">Open</div>
-    <div class="rgrid five" id="rTiles"></div>
-    <div class="rlab">Timer</div>
-    <div class="rgrid">
-      <button class="rb" data-m="5">5 min</button><button class="rb" data-m="10">10 min</button><button class="rb" data-m="15">15 min</button>
-      <button class="rb" data-ta="pause">Pause</button><button class="rb" data-ta="start">Resume</button><button class="rb" data-ta="reset">Reset</button>
-    </div>
+    <div class="rgrid" id="rTiles"></div>
     <div class="rgrid two"><button class="rb" id="rTheme">Next theme</button><button class="rb" id="rBye">Disconnect</button></div>
   </div>
 </div>
@@ -183,6 +183,7 @@
       <div><span id="time">--:--</span><span id="ampm"></span></div>
       <div id="date"></div>
     </div>
+    <div id="cd"><div id="cdLab">GTA VI</div><div id="cdNum">--</div><div id="cdSub"></div></div>
     <div id="weather">
       <div id="wRow"><div id="wIcon"></div><div id="wTemp">--&deg;</div></div>
       <div id="wDesc">Loading weather</div>
@@ -190,16 +191,14 @@
       <div id="wPlace"></div>
     </div>
   </header>
-  <div id="pill" class="hidden"><span id="pillT"></span></div>
 
-  <section id="forecast"></section>
+  <section id="fcWrap"><div id="forecast"></div><div id="hourly" class="hidden"></div></section>
   <main id="tiles"></main>
 
   <footer>
     <div id="hint"></div>
     <div id="controls">
       <div id="swatches" style="display:flex;align-items:center"></div>
-      <button class="btn f" id="timerBtn" tabindex="0">Timer</button>
       <button class="btn f" id="phoneBtn" tabindex="0">Phone</button>
       <button class="btn f" id="setBtn" tabindex="0">Settings</button>
     </div>
@@ -220,22 +219,6 @@
     <div class="msg" id="spMsg"></div>
     <!-- (the two lines above are only for the web version; the TV app opens the real Spotify app) -->
     <div class="row"><button class="btn f" id="doneBtn" tabindex="0">Done</button></div>
-  </div>
- </div>
-
- <div id="timerPanel" class="overlay hidden">
-  <div class="box">
-    <h2>Timer</h2>
-    <div id="tBig">05:00</div>
-    <div class="row center" id="tPresets"></div>
-    <div class="row center">
-      <button class="btn f" id="tMinus" tabindex="0">&minus;1 min</button>
-      <button class="btn f" id="tToggle" tabindex="0">Start</button>
-      <button class="btn f" id="tReset" tabindex="0">Reset</button>
-      <button class="btn f" id="tPlus" tabindex="0">+1 min</button>
-    </div>
-    <div class="note" id="tSound" style="text-align:center"></div>
-    <div class="row center"><button class="btn f" id="tDone" tabindex="0">Done</button></div>
   </div>
  </div>
 
@@ -270,13 +253,12 @@
   </div>
  </div>
 
- <div id="alarm" class="hidden"><div class="big">Time's up</div><div class="small">Press any button to stop</div></div>
  <div id="toast"><span id="toastMsg"></span></div>
 </div>
 
 <script>
 /* Phone side: runs only when this page is opened from the TV's QR code (?remote=...) */
-window.TVH_ICE = { iceServers: [ {urls:"stun:stun.l.google.com:19302"}, {urls:"stun:stun1.l.google.com:19302"}, {urls:"stun:openrelay.metered.ca:80"}, {urls:"turn:openrelay.metered.ca:80",username:"openrelayproject",credential:"openrelayproject"}, {urls:"turn:openrelay.metered.ca:443",username:"openrelayproject",credential:"openrelayproject"}, {urls:"turn:openrelay.metered.ca:443?transport=tcp",username:"openrelayproject",credential:"openrelayproject"} ] };
+window.TVH_ICE = { iceServers: [ {urls:"stun:stun.l.google.com:19302"}, {urls:"stun:stun1.l.google.com:19302"} ] };
 window.TVH_LIBS = {
   peer: "https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js",
   qr:   "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"
@@ -295,14 +277,12 @@ window.TVH_LIBS = {
     if (conn && conn.open) { conn.send(o); try { if (navigator.vibrate) { navigator.vibrate(15); } } catch (e) {} }
     else { msg("Not connected", true); show(false); }
   }
-  var names = ["Netflix", "YouTube", "Prime", "Viu", "Spotify"];
+  var names = ["Netflix", "YouTube", "Prime", "Viu", "Spotify", "PS5"];
   names.forEach(function (n, i) {
     var b = document.createElement("button"); b.className = "rb"; b.textContent = String(i + 1); b.title = n;
     b.addEventListener("click", function () { send({ t: "tile", i: i }); }); $("rTiles").appendChild(b);
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-k]"), function (b) { b.addEventListener("click", function () { send({ t: "key", k: b.getAttribute("data-k") }); }); });
-  Array.prototype.forEach.call(document.querySelectorAll("[data-m]"), function (b) { b.addEventListener("click", function () { send({ t: "timer", a: "preset", m: +b.getAttribute("data-m") }); }); });
-  Array.prototype.forEach.call(document.querySelectorAll("[data-ta]"), function (b) { b.addEventListener("click", function () { send({ t: "timer", a: b.getAttribute("data-ta") }); }); });
   $("rTheme").addEventListener("click", function () { send({ t: "theme" }); });
   $("rBye").addEventListener("click", function () { try { if (conn) { conn.close(); } } catch (e) {} });
   function connect() {
@@ -348,7 +328,8 @@ var TILES = [
   { name:"YouTube",     appId:"youtube.leanback.v4", url:"https://www.youtube.com/tv", color:"#ff0000", letter:"▶" },
   { name:"Prime Video", appId:"amazon",              url:"https://www.primevideo.com", color:"#00a8e1", letter:"P" },
   { name:"Viu",         appId:"com.webos.app.browser", appParams:{ target:"https://viu.to/" }, url:"https://viu.to/",            color:"#e8a317", letter:"V" },
-  { name:"Spotify",     action:"music", appId:"spotify-beehive",                    color:"#1db954", letter:"S" }
+  { name:"Spotify",     action:"music", appId:"spotify-beehive",                    color:"#1db954", letter:"S" },
+  { name:"PS5",         appId:"com.webos.app.hdmi2",                                      color:"#1f4fa3", letter:"PS5", small:true }
 ];
 var THEMES = [
   { id:"midnight", name:"Midnight", c:"#3a4aa8" }, { id:"sunset", name:"Sunset", c:"#d9674f" },
@@ -392,9 +373,20 @@ function timeStr(d) {
   if (S.hour12) { return { t:(h % 12 || 12) + ":" + m, ap:(h >= 12 ? "PM" : "AM") }; }
   return { t:pad2(h) + ":" + m, ap:"" };
 }
+var CD = { y:2026, m:10, d:19 };   /* GTA VI release: November 19, 2026 (month is 0-based) */
+function renderCd(today) {
+  var t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate()), tg = new Date(CD.y, CD.m, CD.d);
+  var n = Math.round((tg.getTime() - t0.getTime()) / 86400000), num, sub;
+  if (n > 1) { num = String(n); sub = "days to go"; }
+  else if (n === 1) { num = "1"; sub = "day to go"; }
+  else if (n === 0) { num = "Today!"; sub = "Out now"; }
+  else { num = "Out now"; sub = "Enjoy"; }
+  if ($("cdNum").textContent !== num) { $("cdNum").textContent = num; }
+  if ($("cdSub").textContent !== sub) { $("cdSub").textContent = sub; }
+}
 function tick() {
   var d = zoned(new Date()), t = timeStr(d), h = d.getHours();
-  $("time").textContent = t.t; $("ampm").textContent = t.ap;
+  $("time").textContent = t.t; $("ampm").textContent = t.ap; renderCd(d);
   $("date").textContent = d.toLocaleDateString(undefined, { weekday:"long", month:"long", day:"numeric" });
   $("greet").textContent = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
   if (S.theme === "auto") { applyTheme(); }
@@ -451,7 +443,7 @@ function wxText(c) { return WXLABEL[c] || "Weather"; }
 function wxKey() { return S.lat + "," + S.lon + "," + S.units; }
 function wxUrl() {
   return "https://api.open-meteo.com/v1/forecast?latitude=" + S.lat + "&longitude=" + S.lon +
-    "&current=temperature_2m,apparent_temperature,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min" +
+    "&current=temperature_2m,apparent_temperature,weather_code&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min" +
     "&timezone=auto&forecast_days=5&temperature_unit=" + (S.units === "fahrenheit" ? "fahrenheit" : "celsius");
 }
 function renderWx(j, stale, when) {
@@ -470,7 +462,31 @@ function renderWx(j, stale, when) {
       '</div><div class="dLab">' + wxText(d.weather_code[i]) + '</div><div class="dTemps">' + Math.round(d.temperature_2m_max[i]) + deg + ' <span>' + Math.round(d.temperature_2m_min[i]) + deg + '</span></div></div>';
   }
   $("forecast").innerHTML = html;
+  renderHourly(j);
 }
+var fcInit = false, fcMode = 0;
+function setFc(m) {
+  fcMode = m;
+  var a = $("forecast"), b = $("hourly");
+  a.classList.toggle("hidden", m === 1); b.classList.toggle("hidden", m === 0);
+  var on = m === 1 ? b : a; on.classList.remove("fadein"); void on.offsetWidth; on.classList.add("fadein");
+}
+function renderHourly(j) {
+  var h = j.hourly;
+  if (!h || !h.time || !j.current || !j.current.time) { $("hourly").innerHTML = ""; setFc(0); return; }
+  var key = j.current.time.slice(0, 13), start = 0, i;
+  for (i = 0; i < h.time.length; i++) { if (h.time[i].slice(0, 13) >= key) { start = i; break; } }
+  var html = "";
+  for (i = start; i < start + 12 && i < h.time.length; i++) {
+    var hr = +h.time[i].slice(11, 13);
+    var lab = i === start ? "Now" : (S.hour12 ? ((hr % 12 || 12) + (hr >= 12 ? " PM" : " AM")) : pad2(hr) + ":00");
+    var pop = h.precipitation_probability ? h.precipitation_probability[i] : null;
+    html += '<div class="hr"><div class="hName">' + lab + '</div><div class="hIcon">' + wxIcon(h.weather_code[i]) + '</div><div class="hTemp">' + Math.round(h.temperature_2m[i]) + "&deg;" + '</div><div class="hPop">' + ((pop !== null && pop !== undefined && pop >= 10) ? pop + "%" : "") + '</div></div>';
+  }
+  $("hourly").innerHTML = html;
+  if (!fcInit) { fcInit = true; setFc(1); }
+}
+setInterval(function () { if ($("hourly").innerHTML) { setFc(fcMode ? 0 : 1); } }, 12000);
 var wxLast = 0;
 function loadWeather() {
   var key = wxKey();
@@ -513,8 +529,9 @@ function buildTiles() {
     a.className = "tile f" + (w < 340 ? " sm" : ""); a.id = "tile" + i; a.setAttribute("tabindex", "0");
     a.style.width = w + "px";
     if (t.action === "music") { a.href = "#"; MUSIC_INDEX = i; a.addEventListener("click", function (e) { e.preventDefault(); if (window.PalmServiceBridge && t.appId) { toast("Opening " + t.name + "…"); launchApp(t.appId, openMusic); } else { openMusic(); } }); }
+    else if (!t.url) { a.href = "#"; a.addEventListener("click", function (e) { e.preventDefault(); if (window.PalmServiceBridge && t.appId) { toast("Switching to " + t.name + "…"); launchApp(t.appId, function () { toast("Couldn't open " + t.name); }); } else { toast(t.name + " only works in the TV app"); } }); }
     else { a.href = t.url; if (t.appId) { a.addEventListener("click", function (e) { if (window.PalmServiceBridge) { e.preventDefault(); toast("Opening " + t.name + "…"); launchApp(t.appId, function () { location.href = t.url; }, t.appParams); } }); } }
-    a.innerHTML = '<span class="num">' + (i + 1) + '</span><div class="logo" style="background:' + t.color + '">' + t.letter + '</div><div class="tname">' + t.name + '</div>';
+    a.innerHTML = '<span class="num">' + (i + 1) + '</span><div class="logo" style="background:' + t.color + (t.small ? ';font-size:44px' : '') + '">' + t.letter + '</div><div class="tname">' + t.name + '</div>';
     a.addEventListener("mouseenter", function () { a.focus(); });
     m.appendChild(a);
   });
@@ -558,7 +575,7 @@ function toast(msg) {
   clearTimeout(toastT); toastT = setTimeout(function () { $("toast").className = ""; }, 1800);
 }
 
-/* ---- overlays (settings, timer, music, phone) ---- */
+/* ---- overlays (settings, music, phone) ---- */
 function openOverlay(id, focusId, opener) { overlay = $(id); openerId = opener; overlay.className = "overlay"; $(focusId).focus(); }
 function closeOverlay() {
   if (!overlay) { return; }
@@ -622,88 +639,16 @@ $("spGo").addEventListener("click", saveSpotify);
 if (window.PalmServiceBridge) { $("spRow").style.display = "none"; $("spMsg").style.display = "none"; }
 $("spIn").addEventListener("keydown", function (e) { if (e.keyCode === 13) { saveSpotify(); } });
 
-/* ---- timer ---- */
-var T = (function () {
-  var d = { total:300000, left:300000, end:0, running:false };
-  try {
-    var s = JSON.parse(lsGet("tvTimer") || "null");
-    if (s && typeof s.total === "number" && typeof s.left === "number") { d = s; if (d.running && d.end <= Date.now()) { d.running = false; d.left = 0; } }
-  } catch (e) {}
-  return d;
-})();
-function saveT() { lsSet("tvTimer", JSON.stringify(T)); }
-function remain() { return T.running ? Math.max(0, T.end - Date.now()) : T.left; }
-function fmt(ms) {
-  var s = Math.ceil(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), c = s % 60;
-  return h ? h + ":" + pad2(m) + ":" + pad2(c) : pad2(m) + ":" + pad2(c);
-}
-function renderTimer() {
-  var r = remain();
-  $("tBig").textContent = fmt(r);
-  $("tToggle").textContent = T.running ? "Pause" : (r > 0 && r < T.total ? "Resume" : "Start");
-  var show = T.running || (r > 0 && r < T.total);
-  $("pill").className = show ? "" : "hidden"; $("pillT").textContent = "Timer " + fmt(r);
-}
-function timerStart() { initAudio(); if (T.left <= 0) { T.left = T.total; } if (!T.running) { T.running = true; T.end = Date.now() + T.left; } saveT(); renderTimer(); }
-function timerPause() { if (T.running) { T.left = Math.max(0, T.end - Date.now()); T.running = false; saveT(); renderTimer(); } }
-function timerReset() { T.running = false; T.left = T.total; saveT(); renderTimer(); }
-function timerPreset(min) { T.running = false; T.total = T.left = min * 60000; saveT(); renderTimer(); }
-function timerAdd(ms) {
-  if (T.running) { T.end = Math.max(Date.now() + 1000, T.end + ms); T.total = Math.max(60000, T.total + ms); }
-  else { T.left = Math.max(60000, T.left + ms); T.total = T.left; }
-  saveT(); renderTimer();
-}
-[1, 5, 10, 15, 30, 60].forEach(function (m) {
-  var b = document.createElement("button"); b.className = "btn f"; b.setAttribute("tabindex", "0"); b.textContent = m + " min"; b.id = "tp" + m;
-  b.addEventListener("click", function () { timerPreset(m); }); $("tPresets").appendChild(b);
-});
-$("timerBtn").addEventListener("click", function () { updateSoundNote(); renderTimer(); openOverlay("timerPanel", "tToggle", "timerBtn"); });
-$("tToggle").addEventListener("click", function () { if (T.running) { timerPause(); } else { timerStart(); } });
-$("tReset").addEventListener("click", timerReset);
-$("tPlus").addEventListener("click", function () { timerAdd(60000); });
-$("tMinus").addEventListener("click", function () { timerAdd(-60000); });
-$("tDone").addEventListener("click", closeOverlay);
-
-var ctx = null, alarmOn = false, alarmT = null;
-function updateSoundNote() {
-  $("tSound").textContent = (ctx && ctx.state === "running") ? "Alarm sound is on." : "Press any button on the TV remote once to turn the alarm sound on.";
-}
-function initAudio() {
-  if (ctx) { if (ctx.state === "suspended") { try { ctx.resume(); } catch (e) {} } updateSoundNote(); return; }
-  try { var AC = window.AudioContext || window.webkitAudioContext; if (AC) { ctx = new AC(); if (ctx.resume) { ctx.resume(); } } } catch (e) {}
-  updateSoundNote();
-}
-["keydown", "click", "touchstart"].forEach(function (ev) { addEventListener(ev, initAudio, true); });
-function beep() {
-  if (!ctx) { return; }
-  try {
-    [0, 0.3, 0.6].forEach(function (dt) {
-      var o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + dt;
-      o.type = "sine"; o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
-      o.start(t); o.stop(t + 0.25);
-    });
-  } catch (e) {}
-}
-function showAlarm() {
-  alarmOn = true; $("alarm").className = ""; beep();
-  clearInterval(alarmT); var n = 0;
-  alarmT = setInterval(function () { n++; if (n > 90) { dismissAlarm(); return; } beep(); }, 1200);
-}
-function dismissAlarm() { alarmOn = false; $("alarm").className = "hidden"; clearInterval(alarmT); }
-function finishTimer() { T.running = false; T.left = 0; saveT(); renderTimer(); wake(); showAlarm(); }
-setInterval(function () { if (T.running) { if (T.end - Date.now() <= 0) { finishTimer(); } else { renderTimer(); } } }, 250);
-renderTimer();
 
 /* ---- idle: dim + slowly shift pixels (protects OLED/LCD from burn-in) ---- */
 function wake() { lastActive = Date.now(); document.body.className = document.body.className.replace(/\s*idle/, ""); }
 setInterval(function () {
-  if (S.idleMin > 0 && Date.now() - lastActive > S.idleMin * 60000 && !alarmOn && document.body.className.indexOf("idle") < 0) { document.body.className += " idle"; }
+  if (S.idleMin > 0 && Date.now() - lastActive > S.idleMin * 60000 && document.body.className.indexOf("idle") < 0) { document.body.className += " idle"; }
 }, 5000);
 var SHIFTS = [[0,0],[6,4],[-5,7],[4,-6],[-7,-3]], shiftI = 0;
 setInterval(function () { shiftI = (shiftI + 1) % SHIFTS.length; $("shift").style.transform = "translate(" + SHIFTS[shiftI][0] + "px," + SHIFTS[shiftI][1] + "px)"; }, 60000);
 addEventListener("mousemove", function () { if (document.body.className.indexOf("idle") >= 0) { wake(); } else { lastActive = Date.now(); } });
-setInterval(function () { if (zoned(new Date()).getHours() === 4 && Date.now() - bootT > 6 * 3600000 && !T.running) { location.reload(); } }, 60000);
+setInterval(function () { if (zoned(new Date()).getHours() === 4 && Date.now() - bootT > 6 * 3600000) { location.reload(); } }, 60000);
 
 /* ---- navigation: shared by the TV remote and the phone remote ---- */
 function focusables() {
@@ -729,7 +674,6 @@ var DIRS = { 37:[-1, 0], 38:[0, -1], 39:[1, 0], 40:[0, 1] };
 var KEYDIR = { left:[-1, 0], up:[0, -1], right:[1, 0], down:[0, 1] };
 addEventListener("keydown", function (e) {
   var k = e.keyCode, a = document.activeElement, inInput = a && a.tagName === "INPUT";
-  if (alarmOn) { dismissAlarm(); e.preventDefault(); return; }
   if (document.body.className.indexOf("idle") >= 0) { wake(); e.preventDefault(); return; }
   lastActive = Date.now();
   if (k === 27 || k === 461 || k === 10009 || (k === 8 && !inInput)) { if (overlay) { closeOverlay(); e.preventDefault(); } return; }
@@ -804,7 +748,7 @@ function onMsg(conn, d) {
     }
     return;
   }
-  wake(); if (alarmOn) { dismissAlarm(); return; }
+  wake();
   handleCmd(d);
 }
 function handleCmd(d) {
@@ -815,10 +759,6 @@ function handleCmd(d) {
     else if (k === "back") { closeOverlay(); }
   }
   else if (d.t === "tile") { var i = d.i | 0, t = $("tile" + i); if (t && i >= 0 && i < TILES.length) { t.click(); } }
-  else if (d.t === "timer") {
-    if (d.a === "pause") { timerPause(); } else if (d.a === "reset") { timerReset(); } else if (d.a === "start") { timerStart(); }
-    else if (d.a === "preset" && +d.m > 0 && +d.m <= 180) { timerPreset(+d.m); timerStart(); }
-  }
   else if (d.t === "theme") { nextTheme(); }
 }
 $("phoneBtn").addEventListener("click", function () { renderPair(); openOverlay("pairPanel", "pairDone", "phoneBtn"); startRemote(); });
